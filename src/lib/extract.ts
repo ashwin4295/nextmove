@@ -66,6 +66,7 @@ Rules:
 - message: 60–110 words. First person. No flattery, no exclamation marks, no buzzwords. Address contact.name, or start with "Hi," if name is null.
 - decisionDate is an ISO date 30–45 days from today (${new Date().toISOString().slice(0, 10)}).
 - privateItems: anything the user asked to keep private.
+- Never use an em dash or en dash anywhere in any string; use a comma, a full stop, or a colon instead.
 - Return ONLY JSON.`;
 
 const DRAFT_PROMPT = `Rewrite the first message for a newly supplied name. Return ONLY the message text. No JSON, no markdown, no quotes around the whole thing.
