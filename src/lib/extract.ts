@@ -58,7 +58,7 @@ export type NextMove = {
 Path vocabulary you must offer from when it fits: Product · Growth · AI / applied AI · Engineering · Consulting / strategy · Founder / operator · Leadership rise in current function · MBA as a route (never a verdict) · Stay and reinvent.
 
 Rules:
-- Quote the user's own words inside whyItFits and the message where possible.
+- whyItFits is written TO the user in second person ("You said...", "You named Rohan..."), never "the user". Quote their own words inside whyItFits and the message where possible.
 - If the transcript is short (act 1 only), still produce a chosenPath, at least one other path, and a message. Mark actReached: 1.
 - otherPaths: 1 to 3. At least one realism value across chosenPath + otherPaths must be 'a stretch' or 'long shot' unless the evidence clearly says otherwise.
 - Include 'Stay and reinvent' when the evidence supports it.
