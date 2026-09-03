@@ -201,7 +201,7 @@ export function TalkClient({
               voiceId: "EXAVITQu4vr4xnSDxMaL",
               model: "eleven_turbo_v2_5",
             }
-          : { provider: "deepgram" as const, model: "aura-2", voiceId: "thalia" },
+          : { provider: "vapi" as const, voiceId: "Rohan" },
       transcriber: {
         provider: "deepgram" as const,
         model: "nova-2",
