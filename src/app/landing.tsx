@@ -633,10 +633,6 @@ export function Landing({ source }: { source: string }) {
             <p className="mt-4 text-[15px] text-muted">
               About ten minutes · Voice or text · Free during Build Week
             </p>
-            <p className="mt-3 text-[15px] text-muted">
-              Questions written by a coach who has guided 1,000+ professionals
-              through career transitions. Ex-Bain. INSEAD MBA.
-            </p>
           </div>
           <div className="min-w-0 md:col-span-7">
             <HeroScene />
