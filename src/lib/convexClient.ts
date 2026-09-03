@@ -16,6 +16,9 @@ export type SessionDoc = {
   contactName: string | null;
   name: string | null;
   email: string | null;
+  payLinkUrl: string | null;
+  payLinkId: string | null;
+  paid: boolean;
 };
 
 export type Stats = {
@@ -25,6 +28,7 @@ export type Stats = {
   act3: number;
   written: number;
   sent: number;
+  paid: number;
   shared: number;
   roadmaps: number;
   selected: number;
@@ -36,6 +40,7 @@ export type RecentRow = {
   source: string;
   actReached: number | null;
   sent: boolean;
+  paid: boolean;
   shares: number;
   email: string | null;
 };
@@ -55,6 +60,12 @@ export type SessionStore = {
   selectPath: (args: { id: string; path: string }) => Promise<void>;
   share: (args: { id: string }) => Promise<void>;
   markSent: (args: { id: string }) => Promise<void>;
+  setPayLink: (args: {
+    id: string;
+    url: string;
+    linkId: string;
+  }) => Promise<void>;
+  markPaid: (args: { id: string; paymentId: string }) => Promise<void>;
   setContact: (args: {
     id: string;
     contactName: string;
@@ -78,6 +89,7 @@ function computeStats(rows: MemoryRow[]): Stats {
     written,
     roadmaps: written,
     sent: rows.filter((r) => r.sent).length,
+    paid: rows.filter((r) => r.paid).length,
     selected: rows.filter((r) => r.selectedPath != null).length,
     shared: rows.filter((r) => r.shares > 0).length,
   };
@@ -93,7 +105,13 @@ function getMemoryMap(): Map<string, MemoryRow> {
   return g.__nextmoveSessions;
 }
 
-type SessionExtras = { name: string | null; email: string | null };
+type SessionExtras = {
+  name: string | null;
+  email: string | null;
+  payLinkUrl?: string | null;
+  payLinkId?: string | null;
+  paid?: boolean;
+};
 
 function extrasMap(): Map<string, SessionExtras> {
   const g = globalThis as typeof globalThis & {
@@ -105,8 +123,9 @@ function extrasMap(): Map<string, SessionExtras> {
   return g.__nextmoveExtras;
 }
 
-function rememberExtras(id: string, extras: SessionExtras) {
-  extrasMap().set(id, extras);
+function rememberExtras(id: string, extras: Partial<SessionExtras>) {
+  const prev = extrasMap().get(id) ?? { name: null, email: null };
+  extrasMap().set(id, { ...prev, ...extras });
 }
 
 function countUniqueFrom(rows: { roadmap: unknown; email: string | null }[]) {
@@ -132,6 +151,9 @@ function hydrate(row: {
   contactName?: string | null;
   name?: string | null;
   email?: string | null;
+  payLinkUrl?: string | null;
+  payLinkId?: string | null;
+  paid?: boolean;
 }): SessionDoc {
   const nextMove = normalizeNextMove(row.roadmap);
   const blob =
@@ -156,6 +178,18 @@ function hydrate(row: {
     (typeof blob?.__email === "string" ? blob.__email : null) ??
     extras?.email ??
     null;
+  const payLinkUrl =
+    row.payLinkUrl ??
+    (typeof blob?.__payLinkUrl === "string" ? blob.__payLinkUrl : null) ??
+    extras?.payLinkUrl ??
+    null;
+  const payLinkId =
+    row.payLinkId ??
+    (typeof blob?.__payLinkId === "string" ? blob.__payLinkId : null) ??
+    extras?.payLinkId ??
+    null;
+  const paid =
+    row.paid === true || blob?.__paid === true || extras?.paid === true;
   return {
     _id: String(row._id),
     createdAt: row.createdAt,
@@ -169,6 +203,9 @@ function hydrate(row: {
     contactName,
     name,
     email,
+    payLinkUrl,
+    payLinkId,
+    paid,
   };
 }
 
@@ -188,6 +225,9 @@ const memoryStore: SessionStore = {
       contactName: null,
       name: name?.trim() || null,
       email: email?.trim() || null,
+      payLinkUrl: null,
+      payLinkId: null,
+      paid: false,
     });
     return id;
   },
@@ -218,6 +258,18 @@ const memoryStore: SessionStore = {
     if (!row) return;
     row.sent = true;
   },
+  async setPayLink({ id, url, linkId }) {
+    const row = getMemoryMap().get(id);
+    if (!row) return;
+    row.payLinkUrl = url;
+    row.payLinkId = linkId;
+  },
+  async markPaid({ id }) {
+    const row = getMemoryMap().get(id);
+    if (!row) return;
+    if (row.paid) return;
+    row.paid = true;
+  },
   async setContact({ id, contactName, message }) {
     const row = getMemoryMap().get(id);
     if (!row) return;
@@ -247,6 +299,7 @@ const memoryStore: SessionStore = {
         source: r.source,
         actReached: r.actReached,
         sent: r.sent,
+        paid: r.paid,
         shares: r.shares,
         email: r.email,
       }));
@@ -355,6 +408,45 @@ function convexStore(url: string): SessionStore {
         });
       }
     },
+    async setPayLink({ id, url, linkId }) {
+      rememberExtras(id, { payLinkUrl: url, payLinkId: linkId });
+      try {
+        await client().mutation(anyApi.sessions.setPayLink, { id, url, linkId });
+      } catch {
+        const row = await client().query(anyApi.sessions.get, { id });
+        if (!row) return;
+        const prev =
+          row.roadmap && typeof row.roadmap === "object" ? row.roadmap : {};
+        await finishViaExisting(id, row.transcript ?? [], {
+          ...prev,
+          __payLinkUrl: url,
+          __payLinkId: linkId,
+        });
+      }
+    },
+    async markPaid({ id, paymentId }) {
+      rememberExtras(id, { paid: true });
+      try {
+        await client().mutation(anyApi.sessions.markPaid, { id, paymentId });
+      } catch {
+        const row = await client().query(anyApi.sessions.get, { id });
+        if (!row) return;
+        const prev =
+          row.roadmap && typeof row.roadmap === "object" ? row.roadmap : {};
+        if (
+          prev &&
+          typeof prev === "object" &&
+          "__paid" in prev &&
+          prev.__paid === true
+        ) {
+          return;
+        }
+        await finishViaExisting(id, row.transcript ?? [], {
+          ...prev,
+          __paid: true,
+        });
+      }
+    },
     async setContact({ id, contactName, message }) {
       try {
         await client().mutation(anyApi.sessions.setContact, {
@@ -388,8 +480,12 @@ function convexStore(url: string): SessionStore {
     async stats() {
       const raw = (await client().query(anyApi.sessions.stats, {})) as Partial<Stats> & {
         roadmaps?: number;
+        paid?: number;
       };
       const written = raw.written ?? raw.roadmaps ?? 0;
+      const extraPaid = [...extrasMap().values()].filter(
+        (e) => e.paid === true,
+      ).length;
       return {
         started: raw.started ?? 0,
         act1: raw.act1 ?? 0,
@@ -398,6 +494,7 @@ function convexStore(url: string): SessionStore {
         written,
         roadmaps: written,
         sent: raw.sent ?? 0,
+        paid: Math.max(raw.paid ?? 0, extraPaid),
         selected: raw.selected ?? 0,
         shared: raw.shared ?? 0,
       };
@@ -411,6 +508,7 @@ function convexStore(url: string): SessionStore {
           ...r,
           _id: String(r._id),
           email: r.email ?? extrasMap().get(String(r._id))?.email ?? null,
+          paid: r.paid === true || extrasMap().get(String(r._id))?.paid === true,
         }));
       } catch {
         const ids = recentIdList().slice(0, Math.min(Math.max(limit, 1), 25));
@@ -428,6 +526,7 @@ function convexStore(url: string): SessionStore {
             source: r.source,
             actReached: r.actReached,
             sent: r.sent,
+            paid: r.paid,
             shares: r.shares,
             email: r.email,
           }));

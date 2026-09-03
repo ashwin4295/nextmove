@@ -40,6 +40,7 @@ export default async function AdminPage({
     ["act3", stats.act3],
     ["written", stats.written],
     ["sent", stats.sent],
+    ["paid", stats.paid],
     ["shared", stats.shared],
     ["signups (unique email + next move written)", uniqueSignups],
   ];
@@ -71,6 +72,7 @@ export default async function AdminPage({
                 <th className="px-4 py-3 font-medium">email</th>
                 <th className="px-4 py-3 font-medium">actReached</th>
                 <th className="px-4 py-3 font-medium">sent</th>
+                <th className="px-4 py-3 font-medium">paid</th>
                 <th className="px-4 py-3 font-medium">shares</th>
                 <th className="px-4 py-3 font-medium">link</th>
               </tr>
@@ -83,6 +85,7 @@ export default async function AdminPage({
                   <td className="px-4 py-3">{row.email || "-"}</td>
                   <td className="px-4 py-3">{row.actReached ?? "-"}</td>
                   <td className="px-4 py-3">{row.sent ? "yes" : "no"}</td>
+                  <td className="px-4 py-3">{row.paid ? "yes" : "no"}</td>
                   <td className="px-4 py-3">{row.shares}</td>
                   <td className="px-4 py-3">
                     <a href={`/r/${row._id}`} className="text-forest underline">
@@ -93,7 +96,7 @@ export default async function AdminPage({
               ))}
               {recent.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={7}>
+                  <td className="px-4 py-6 text-muted" colSpan={8}>
                     No sessions yet.
                   </td>
                 </tr>

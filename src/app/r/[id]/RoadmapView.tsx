@@ -40,6 +40,7 @@ export function NextMoveView({
   sent: initialSent,
   contactName: initialContactName,
   source,
+  paid = false,
 }: {
   id: string;
   nextMove: PublicNextMove | null;
@@ -47,6 +48,7 @@ export function NextMoveView({
   sent: boolean;
   contactName: string | null;
   source: string;
+  paid?: boolean;
 }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -65,6 +67,8 @@ export function NextMoveView({
   const [correction, setCorrection] = useState("");
   const [correctBusy, setCorrectBusy] = useState(false);
   const [correctError, setCorrectError] = useState("");
+  const [packBusy, setPackBusy] = useState(false);
+  const [packError, setPackError] = useState("");
 
   const userTurns = transcript.filter(
     (t) => t.role === "user" && t.text.trim(),
@@ -75,6 +79,18 @@ export function NextMoveView({
       track("next_move_written", { session_id: id, source });
     }
   }, [id, nextMove, source]);
+
+  useEffect(() => {
+    if (!paid) return;
+    try {
+      const key = `nextmove_pack_paid_${id}`;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {
+      // private mode
+    }
+    track("pack_paid", { session_id: id, source });
+  }, [id, paid, source]);
 
   async function writeNow() {
     setWriting(true);
@@ -159,19 +175,31 @@ export function NextMoveView({
     window.setTimeout(() => setShared(false), 2000);
   }
 
-  function onPack() {
-    const payLink = process.env.NEXT_PUBLIC_PAY_LINK;
-    if (payLink) {
-      track("pay_clicked", { session_id: id, source });
-      const sep = payLink.includes("?") ? "&" : "?";
-      window.open(
-        `${payLink}${sep}client_reference_id=${encodeURIComponent(id)}`,
-        "_blank",
-        "noopener,noreferrer",
-      );
-      return;
+  async function onPack() {
+    if (packBusy) return;
+    track("pay_clicked", { session_id: id, source });
+    setPackBusy(true);
+    setPackError("");
+    try {
+      const res = await fetch("/api/pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (data.error || !data.url) {
+        setPackError("Payments are not available right now.");
+        return;
+      }
+      const opened = window.open(data.url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        window.location.href = data.url;
+      }
+    } catch {
+      setPackError("Payments are not available right now.");
+    } finally {
+      setPackBusy(false);
     }
-    track("pack_clicked", { session_id: id, source });
   }
 
   async function submitCorrection() {
@@ -392,24 +420,36 @@ export function NextMoveView({
         </div>
 
         <Card className="mt-10 p-6">
-          <p className="text-lg font-semibold">The Next Move Pack</p>
-          <p className="mt-3 leading-relaxed">
-            Three more messages written for you: one to a hiring manager in that
-            world, one to a mentor you admire, and one to your current manager
-            for the internal version of this move. Plus a two-week follow-up
-            plan and a re-run of this conversation after you have had the first
-            one.
-          </p>
-          <p className="mt-3 text-[15px] font-medium">₹99, one time.</p>
-          <div className="mt-5">
-            {process.env.NEXT_PUBLIC_PAY_LINK ? (
-              <Button onClick={onPack}>Get the pack</Button>
-            ) : (
-              <Button className="opacity-50" onClick={onPack}>
-                Coming Saturday
-              </Button>
-            )}
-          </div>
+          {paid ? (
+            <>
+              <p className="text-lg font-semibold">Your pack is on its way</p>
+              <p className="mt-3 leading-relaxed">
+                Thank you. The three messages and your two-week plan will reach
+                your email within 24 hours. Reply to that email if anything
+                reads wrong.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold">The Next Move Pack</p>
+              <p className="mt-3 leading-relaxed">
+                Three more messages written for you: one to a hiring manager in
+                that world, one to a mentor you admire, and one to your current
+                manager for the internal version of this move. Plus a two-week
+                follow-up plan and a re-run of this conversation after you have
+                had the first one.
+              </p>
+              <p className="mt-3 text-[15px] font-medium">₹99, one time.</p>
+              <div className="mt-5">
+                <Button onClick={onPack} disabled={packBusy}>
+                  {packBusy ? "Opening Razorpay…" : "Get the pack"}
+                </Button>
+              </div>
+              {packError ? (
+                <p className="mt-3 text-sm text-red-700">{packError}</p>
+              ) : null}
+            </>
+          )}
         </Card>
 
         <details className="group mt-10 border-t border-b border-line py-4">

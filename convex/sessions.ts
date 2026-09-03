@@ -129,7 +129,33 @@ export const get = queryGeneric({
       ...row,
       sent: row.sent ?? false,
       contactName: row.contactName ?? null,
+      payLinkUrl: row.payLinkUrl ?? null,
+      payLinkId: row.payLinkId ?? null,
+      paid: row.paid ?? false,
     };
+  },
+});
+
+export const setPayLink = mutationGeneric({
+  args: { id: v.id("sessions"), url: v.string(), linkId: v.string() },
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.id);
+    if (!row) return;
+    await ctx.db.patch(args.id, {
+      payLinkUrl: args.url,
+      payLinkId: args.linkId,
+    });
+  },
+});
+
+export const markPaid = mutationGeneric({
+  args: { id: v.id("sessions"), paymentId: v.string() },
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.id);
+    if (!row) return;
+    if (row.paid === true) return;
+    void args.paymentId;
+    await ctx.db.patch(args.id, { paid: true });
   },
 });
 
@@ -146,6 +172,7 @@ export const stats = queryGeneric({
       written,
       roadmaps: written,
       sent: rows.filter((r) => r.sent === true).length,
+      paid: rows.filter((r) => r.paid === true).length,
       selected: rows.filter((r) => r.selectedPath != null).length,
       shared: rows.filter((r) => (r.shares ?? 0) > 0).length,
     };
@@ -167,6 +194,7 @@ export const listRecent = queryGeneric({
       source: r.source,
       actReached: r.actReached,
       sent: r.sent ?? false,
+      paid: r.paid ?? false,
       shares: r.shares ?? 0,
       email: r.email ?? null,
     }));
