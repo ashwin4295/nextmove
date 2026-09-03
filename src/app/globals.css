@@ -1,21 +1,103 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f4ee;
-  --foreground: #1c1917;
-  --accent: #b45309;
+  --canvas: #fafaf9;
+  --surface: #ffffff;
+  --ink: #0c0a09;
+  --muted: #6b6560;
+  --line: #e7e5e4;
+  --wash: #f3f1ee;
+  --accent: #0f766e;
+  --accent-ink: #ffffff;
+  --accent-wash: #e6f4f2;
+  --shadow-card: 0 10px 30px rgba(12, 10, 9, 0.08);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-wash: var(--wash);
   --color-accent: var(--accent);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-wash: var(--accent-wash);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-inter-tight);
+}
+
+html {
+  background: var(--canvas);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+
+h1,
+.h1 {
+  font-family: var(--font-inter-tight), var(--font-inter), sans-serif;
+  font-weight: 500;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+h2,
+.h2 {
+  font-family: var(--font-inter-tight), var(--font-inter), sans-serif;
+  font-weight: 500;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.card-shadow {
+  box-shadow: var(--shadow-card);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes orb-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html.js-anim .reveal:not(.in-view) {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  html.js-anim .reveal.in-view {
+    animation: fade-up 320ms ease forwards;
+  }
+
+  .orb-speak {
+    animation: orb-pulse 1.6s ease-in-out infinite;
+  }
 }

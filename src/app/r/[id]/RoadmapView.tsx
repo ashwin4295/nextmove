@@ -1,42 +1,120 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { Roadmap, TranscriptTurn } from "@/lib/extract";
+import type { NextMove, TranscriptTurn } from "@/lib/extract";
+import { Badge, Button, Card, Container, Eyebrow, Wordmark } from "@/lib/ui";
 
-type PublicRoadmap = Omit<Roadmap, "privateItems">;
+type PublicNextMove = Omit<NextMove, "privateItems">;
 
-const TRIGGER_SENTENCE: Record<Roadmap["trigger"], string> = {
+const TRIGGER_SENTENCE: Record<NextMove["trigger"], string> = {
   push: "You're being pushed more than pulled.",
   pull: "You're being pulled more than pushed.",
   drift: "You're drifting more than being pushed or pulled.",
 };
 
-export function RoadmapView({
+function formatDecisionDate(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export function NextMoveView({
   id,
-  roadmap,
+  nextMove,
   transcript,
-  initialSelected,
+  sent: initialSent,
+  contactName: initialContactName,
 }: {
   id: string;
-  roadmap: PublicRoadmap | null;
+  nextMove: PublicNextMove | null;
   transcript: TranscriptTurn[];
-  initialSelected: string | null;
+  sent: boolean;
+  contactName: string | null;
 }) {
-  const [selected, setSelected] = useState(initialSelected);
+  const router = useRouter();
+  const [copied, setCopied] = useState(false);
+  const [sent, setSent] = useState(initialSent);
   const [shared, setShared] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [writing, setWriting] = useState(false);
+  const [writeError, setWriteError] = useState("");
+  const [nameDraft, setNameDraft] = useState("");
+  const [contactBusy, setContactBusy] = useState(false);
+  const [message, setMessage] = useState(nextMove?.message ?? "");
+  const [contactName, setContactName] = useState(
+    nextMove?.contact.name ?? initialContactName,
+  );
+  const [contactRelation] = useState(nextMove?.contact.relation ?? null);
 
-  async function choose(path: string) {
-    setBusy(true);
+  const userTurns = transcript.filter(
+    (t) => t.role === "user" && t.text.trim(),
+  ).length;
+
+  async function writeNow() {
+    setWriting(true);
+    setWriteError("");
     try {
-      await fetch("/api/select", {
+      const res = await fetch("/api/roadmap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, path }),
+        body: JSON.stringify({ id, transcript }),
       });
-      setSelected(path);
+      const data = (await res.json()) as { error?: string };
+      if (data.error === "too_short") {
+        setWriteError("This conversation was too short for an honest answer.");
+        return;
+      }
+      if (data.error) throw new Error(data.error);
+      router.refresh();
+    } catch {
+      setWriteError("Could not write it. Try again.");
     } finally {
-      setBusy(false);
+      setWriting(false);
+    }
+  }
+
+  async function copyMessage() {
+    try {
+      await navigator.clipboard.writeText(message);
+    } catch {
+      // clipboard may be blocked
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function markSent() {
+    await fetch("/api/sent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setSent(true);
+  }
+
+  async function writeForThem() {
+    const name = nameDraft.trim();
+    if (!name) return;
+    setContactBusy(true);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, contactName: name }),
+      });
+      const data = (await res.json()) as {
+        message?: string;
+        contactName?: string;
+      };
+      if (data.message) setMessage(data.message);
+      setContactName(data.contactName ?? name);
+    } finally {
+      setContactBusy(false);
     }
   }
 
@@ -53,108 +131,173 @@ export function RoadmapView({
       body: JSON.stringify({ id }),
     });
     setShared(true);
+    window.setTimeout(() => setShared(false), 2000);
   }
 
-  if (!roadmap) {
+  if (!nextMove) {
     return (
-      <div className="flex flex-col gap-4">
-        <p className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm">
-          Roadmap failed, transcript saved
-        </p>
-        <ol className="flex flex-col gap-3">
-          {transcript.map((t, i) => (
-            <li key={i} className="text-sm leading-relaxed">
-              <span className="font-semibold">
-                {t.role === "assistant" ? "Coach" : "You"}:{" "}
-              </span>
-              {t.text}
-            </li>
-          ))}
-        </ol>
-      </div>
+      <main className="mx-auto flex min-h-full w-full max-w-[720px] flex-col gap-6 px-4 py-8">
+        <Wordmark />
+        {userTurns < 2 ? (
+          <p className="font-display text-2xl font-medium leading-snug">
+            This conversation was too short for an honest answer.{" "}
+            <Link href="/" className="text-accent underline">
+              Start again.
+            </Link>
+          </p>
+        ) : (
+          <div>
+            <h1 className="font-display text-3xl font-medium">
+              Not written yet
+            </h1>
+            <div className="mt-6">
+              <Button onClick={writeNow} disabled={writing}>
+                {writing ? "Writing…" : "Write it now"}
+              </Button>
+            </div>
+            {writeError ? (
+              <p className="mt-3 text-sm text-red-700">{writeError}</p>
+            ) : null}
+          </div>
+        )}
+      </main>
     );
   }
 
+  const toLine = contactName
+    ? `To: ${contactName}${contactRelation ? ` · ${contactRelation}` : ""}`
+    : "To: ";
+
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold leading-tight">{roadmap.headline}</h1>
-      <p className="text-base">
-        {TRIGGER_SENTENCE[roadmap.trigger] ?? TRIGGER_SENTENCE.drift}
-      </p>
-      {roadmap.anchors.length > 0 ? (
-        <ul className="flex flex-wrap gap-2">
-          {roadmap.anchors.map((a) => (
-            <li
-              key={a}
-              className="rounded-full border border-accent px-3 py-1 text-sm text-accent"
-            >
-              {a}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+    <main className="min-h-full bg-canvas pb-16">
+      <Container className="max-w-[720px] py-8">
+        <Wordmark />
+        <Eyebrow className="mt-8">YOUR NEXT MOVE</Eyebrow>
+        <h1 className="mt-3">{nextMove.chosenPath.name}</h1>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Badge tone={nextMove.chosenPath.realism} />
+        </div>
+        <p className="mt-4 leading-relaxed">{nextMove.chosenPath.whyItFits}</p>
+        <p className="mt-3 text-muted">
+          {TRIGGER_SENTENCE[nextMove.trigger] ?? TRIGGER_SENTENCE.drift}
+        </p>
 
-      <div className="flex flex-col gap-4">
-        {roadmap.paths.map((path) => {
-          const isSelected = selected === path.name;
-          const dimmed = selected != null && !isSelected;
-          return (
-            <article
-              key={path.name}
-              className={`rounded border bg-white p-4 ${
-                isSelected
-                  ? "border-accent"
-                  : dimmed
-                    ? "border-stone-200 opacity-40"
-                    : "border-stone-300"
-              }`}
-            >
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold">{path.name}</h2>
-                <span className="rounded bg-accent px-2 py-0.5 text-xs font-medium text-white">
-                  {path.realism}
-                </span>
-              </div>
-              <p className="mb-2 text-sm leading-relaxed">{path.whyItFits}</p>
-              <p className="text-sm">
-                <span className="font-semibold">Gap: </span>
-                {path.firstGap}
-              </p>
-              <p className="mb-3 text-sm">
-                <span className="font-semibold">Experiment: </span>
-                {path.firstExperiment}
-              </p>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => choose(path.name)}
-                className="rounded border border-stone-400 px-3 py-2 text-sm font-medium disabled:opacity-50"
+        <Eyebrow className="mt-12">THE FIRST MESSAGE</Eyebrow>
+        <Card shadow className="mt-4 border border-line p-6">
+          <p className="text-sm font-semibold">{toLine}</p>
+          <p className="mt-4 select-text leading-relaxed">{message}</p>
+          {!contactName ? (
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                placeholder="Who do you know in this world? First name"
+                className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-base"
+              />
+              <Button
+                onClick={writeForThem}
+                disabled={contactBusy || !nameDraft.trim()}
               >
-                This is my path
-              </button>
-            </article>
-          );
-        })}
-      </div>
+                {contactBusy ? "Writing…" : "Write it for them"}
+              </Button>
+            </div>
+          ) : null}
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Button onClick={copyMessage}>
+              {copied ? "Copied" : "Copy message"}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={markSent}
+              disabled={sent}
+            >
+              {sent ? "Sent ✓" : "I sent it"}
+            </Button>
+          </div>
+        </Card>
 
-      <p className="text-base font-medium">
-        Decision date: {roadmap.decisionDate}
-      </p>
+        <Eyebrow className="mt-12">WHAT HAS TO STAY TRUE</Eyebrow>
+        {nextMove.anchors.length > 0 ? (
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {nextMove.anchors.map((a) => (
+              <li
+                key={a}
+                className="rounded-full bg-wash px-3 py-1 text-sm text-ink"
+              >
+                {a}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <div className="mt-6 grid gap-6 sm:grid-cols-2">
+          <div>
+            <p className="text-sm font-semibold">Moving away from</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              {nextMove.awayFrom}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Moving toward</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              {nextMove.toward}
+            </p>
+          </div>
+        </div>
 
-      <button
-        type="button"
-        onClick={share}
-        className="rounded bg-accent px-4 py-3 text-base font-medium text-white"
-      >
-        {shared ? "Link copied" : "Share"}
-      </button>
+        {nextMove.otherPaths.length > 0 ? (
+          <>
+            <Eyebrow className="mt-12">THE OTHER DOORS</Eyebrow>
+            <ul className="mt-4 flex flex-col gap-4">
+              {nextMove.otherPaths.map((path) => (
+                <li key={path.name} className="border-b border-line pb-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{path.name}</p>
+                    <Badge tone={path.realism} />
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed">{path.whyItFits}</p>
+                  <p className="mt-1 text-sm text-muted">{path.firstGap}</p>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
 
-      <a
-        href="https://calendly.com/mbbprepofficial/15min?utm_source=nextmove"
-        className="text-sm underline"
-      >
-        Talk this through with Ashwin
-      </a>
-    </div>
+        <Card className="mt-12 bg-accent-wash p-6">
+          <p className="font-display text-lg font-medium">Your next 30 days</p>
+          <p className="mt-3 leading-relaxed">{nextMove.experiment}</p>
+          <p className="mt-3 text-sm font-medium">
+            Decision date: {formatDecisionDate(nextMove.decisionDate)}
+          </p>
+        </Card>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Button onClick={share}>
+            {shared ? "Link copied" : "Share this page"}
+          </Button>
+          <Button
+            variant="secondary"
+            href="https://calendly.com/mbbprepofficial/15min?utm_source=nextmove"
+          >
+            Talk it through with Ashwin
+          </Button>
+        </div>
+
+        <details className="mt-10 rounded-[12px] border border-line bg-surface px-5 py-4">
+          <summary className="cursor-pointer font-semibold">
+            Read the transcript
+          </summary>
+          <ol className="mt-4 flex flex-col gap-3">
+            {transcript.map((t, i) => (
+              <li key={i} className="text-sm leading-relaxed">
+                <span className="font-semibold">
+                  {t.role === "assistant" ? "Coach" : "You"}:{" "}
+                </span>
+                {t.text}
+              </li>
+            ))}
+          </ol>
+        </details>
+      </Container>
+    </main>
   );
 }

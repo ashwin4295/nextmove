@@ -11,9 +11,12 @@ export default defineSchema({
         text: v.string(),
       }),
     ),
+    // Field name stays `roadmap` (no migration). Value is now a NextMove object.
     roadmap: v.union(v.any(), v.null()),
     actReached: v.union(v.number(), v.null()),
     selectedPath: v.union(v.string(), v.null()),
     shares: v.number(),
-  }),
+    sent: v.optional(v.boolean()),
+    contactName: v.optional(v.union(v.string(), v.null())),
+  }).index("by_createdAt", ["createdAt"]),
 });

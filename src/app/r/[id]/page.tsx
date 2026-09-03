@@ -1,18 +1,11 @@
 import { notFound } from "next/navigation";
 import { store } from "@/lib/convexClient";
-import type { Roadmap } from "@/lib/extract";
-import { RoadmapView } from "./RoadmapView";
-
-function toPublicRoadmap(roadmap: Roadmap | null) {
-  if (!roadmap) return null;
-  const { privateItems: _omit, ...pub } = roadmap;
-  void _omit;
-  return pub;
-}
+import { toPublicNextMove } from "@/lib/extract";
+import { NextMoveView } from "./RoadmapView";
 
 export const dynamic = "force-dynamic";
 
-export default async function RoadmapPage({
+export default async function NextMovePage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -21,17 +14,13 @@ export default async function RoadmapPage({
   const session = await store.get({ id });
   if (!session) notFound();
 
-  const roadmap = toPublicRoadmap(session.roadmap);
-
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-lg flex-col gap-6 px-4 py-8">
-      <p className="text-sm font-semibold text-accent">NextMove</p>
-      <RoadmapView
-        id={id}
-        roadmap={roadmap}
-        transcript={session.transcript}
-        initialSelected={session.selectedPath}
-      />
-    </main>
+    <NextMoveView
+      id={id}
+      nextMove={toPublicNextMove(session.roadmap)}
+      transcript={session.transcript}
+      sent={session.sent}
+      contactName={session.contactName}
+    />
   );
 }
