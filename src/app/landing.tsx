@@ -533,7 +533,7 @@ const FAQ = [
   },
   {
     q: "What does it cost?",
-    a: "Free during Build Week. A paid pack with more drafted messages is coming.",
+    a: "Free till Sep 8 2026. A paid pack with more drafted messages is coming.",
   },
   {
     q: "What happens to my conversation?",
@@ -631,7 +631,7 @@ export function Landing({ source }: { source: string }) {
               <StartForm source={source} />
             </div>
             <p className="mt-4 text-[15px] text-muted">
-              About ten minutes · Voice or text · Free during Build Week
+              About ten minutes · Voice or text · Free till Sep 8 2026
             </p>
           </div>
           <div className="min-w-0 md:col-span-7">
