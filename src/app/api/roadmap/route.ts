@@ -45,7 +45,8 @@ export async function POST(req: Request) {
       actReached,
     });
     return NextResponse.json({ id });
-  } catch {
+  } catch (err) {
+    console.error("extract failed", err instanceof Error ? err.message : err);
     await store.finish({
       id,
       transcript,
