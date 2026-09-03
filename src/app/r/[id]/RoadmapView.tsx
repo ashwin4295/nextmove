@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { track } from "@/lib/analytics";
 import type { NextMove, TranscriptTurn } from "@/lib/extract";
 import { Badge, Button, Card, Container, Eyebrow, Wordmark } from "@/lib/ui";
 
@@ -30,12 +31,14 @@ export function NextMoveView({
   transcript,
   sent: initialSent,
   contactName: initialContactName,
+  source,
 }: {
   id: string;
   nextMove: PublicNextMove | null;
   transcript: TranscriptTurn[];
   sent: boolean;
   contactName: string | null;
+  source: string;
 }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -55,6 +58,12 @@ export function NextMoveView({
     (t) => t.role === "user" && t.text.trim(),
   ).length;
 
+  useEffect(() => {
+    if (nextMove) {
+      track("next_move_written", { session_id: id, source });
+    }
+  }, [id, nextMove, source]);
+
   async function writeNow() {
     setWriting(true);
     setWriteError("");
@@ -70,6 +79,7 @@ export function NextMoveView({
         return;
       }
       if (data.error) throw new Error(data.error);
+      track("conversation_finished", { session_id: id, source });
       router.refresh();
     } catch {
       setWriteError("Could not write it. Try again.");
@@ -85,6 +95,7 @@ export function NextMoveView({
       // clipboard may be blocked
     }
     setCopied(true);
+    track("message_copied", { session_id: id, source });
     window.setTimeout(() => setCopied(false), 2000);
   }
 
@@ -95,6 +106,7 @@ export function NextMoveView({
       body: JSON.stringify({ id }),
     });
     setSent(true);
+    track("message_sent", { session_id: id, source });
   }
 
   async function writeForThem() {
@@ -131,7 +143,23 @@ export function NextMoveView({
       body: JSON.stringify({ id }),
     });
     setShared(true);
+    track("page_shared", { session_id: id, source });
     window.setTimeout(() => setShared(false), 2000);
+  }
+
+  function onPack() {
+    const payLink = process.env.NEXT_PUBLIC_PAY_LINK;
+    if (payLink) {
+      track("pay_clicked", { session_id: id, source });
+      const sep = payLink.includes("?") ? "&" : "?";
+      window.open(
+        `${payLink}${sep}client_reference_id=${encodeURIComponent(id)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      return;
+    }
+    track("pack_clicked", { session_id: id, source });
   }
 
   if (!nextMove) {
@@ -268,6 +296,28 @@ export function NextMoveView({
           <p className="mt-3 text-sm font-medium">
             Decision date: {formatDecisionDate(nextMove.decisionDate)}
           </p>
+        </Card>
+
+        <Eyebrow className="mt-12">GO FURTHER</Eyebrow>
+        <Card className="mt-4 border border-line p-6">
+          <p className="font-display text-lg font-medium">The Next Move Pack</p>
+          <p className="mt-3 leading-relaxed">
+            Three more messages written for you: one to a hiring manager in that
+            world, one to a mentor you admire, and one to your current manager
+            for the internal version of this move. Plus a two-week follow-up
+            plan and a re-run of this conversation after you have had the first
+            one.
+          </p>
+          <p className="mt-3 text-sm font-medium">₹499, one time.</p>
+          <div className="mt-5">
+            {process.env.NEXT_PUBLIC_PAY_LINK ? (
+              <Button onClick={onPack}>Get the pack</Button>
+            ) : (
+              <Button className="opacity-50" onClick={onPack}>
+                Coming Saturday
+              </Button>
+            )}
+          </div>
         </Card>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">

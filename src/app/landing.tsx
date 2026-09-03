@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { rememberSource } from "@/lib/analytics";
 import {
   Button,
   Card,
@@ -20,6 +21,7 @@ function StartForm({
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,17 +31,39 @@ function StartForm({
       setError("First name is required.");
       return;
     }
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Email is required.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError("Enter a valid email.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       const res = await fetch("/api/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source }),
+        body: JSON.stringify({
+          source,
+          name: name.trim(),
+          email: trimmedEmail,
+        }),
       });
+      if (!res.ok) {
+        setError(
+          res.status === 400
+            ? "Enter a valid email."
+            : "Could not start. Try again.",
+        );
+        setBusy(false);
+        return;
+      }
       const data = (await res.json()) as { id?: string };
       if (!data.id) throw new Error("no id");
-      router.push(`/talk/${data.id}?name=${encodeURIComponent(name.trim())}`);
+      router.push(`/talk/${data.id}`);
     } catch {
       setError("Could not start. Try again.");
       setBusy(false);
@@ -57,6 +81,15 @@ function StartForm({
           autoComplete="given-name"
           className="w-full rounded-[10px] border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-muted sm:max-w-xs"
         />
+        <input
+          required
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Your email"
+          autoComplete="email"
+          className="w-full rounded-[10px] border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-muted sm:max-w-xs"
+        />
         <Button type="submit" disabled={busy}>
           {busy ? "Starting…" : "Start the conversation"}
         </Button>
@@ -66,12 +99,19 @@ function StartForm({
         Free during Build Week. Voice or text. Nothing is shared without your
         say.
       </p>
+      <p className="text-sm text-muted">
+        We email your next move so you can find it again. No newsletter.
+      </p>
     </form>
   );
 }
 
 export function Landing({ source }: { source: string }) {
   const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    if (source) rememberSource(source);
+  }, [source]);
 
   useEffect(() => {
     function onScroll() {

@@ -27,9 +27,10 @@ export default async function AdminPage({
     );
   }
 
-  const [stats, recent] = await Promise.all([
+  const [stats, recent, uniqueSignups] = await Promise.all([
     store.stats(),
     store.listRecent({ limit: 25 }),
+    store.countUnique(),
   ]);
 
   const counters: [string, number][] = [
@@ -40,6 +41,7 @@ export default async function AdminPage({
     ["written", stats.written],
     ["sent", stats.sent],
     ["shared", stats.shared],
+    ["signups (unique email + next move written)", uniqueSignups],
   ];
 
   return (
@@ -47,7 +49,7 @@ export default async function AdminPage({
       <Container>
         <Wordmark />
         <Eyebrow className="mt-8">COUNTERS</Eyebrow>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {counters.map(([name, count]) => (
             <div key={name} className="rounded-[12px] border border-line bg-surface p-4">
               <p className="text-sm text-muted">{name}</p>
@@ -63,6 +65,7 @@ export default async function AdminPage({
               <tr className="border-b border-line text-left text-muted">
                 <th className="px-4 py-3 font-medium">createdAt</th>
                 <th className="px-4 py-3 font-medium">source</th>
+                <th className="px-4 py-3 font-medium">email</th>
                 <th className="px-4 py-3 font-medium">actReached</th>
                 <th className="px-4 py-3 font-medium">sent</th>
                 <th className="px-4 py-3 font-medium">shares</th>
@@ -74,6 +77,7 @@ export default async function AdminPage({
                 <tr key={row._id} className="border-b border-line last:border-0">
                   <td className="px-4 py-3">{formatWhen(row.createdAt)}</td>
                   <td className="px-4 py-3">{row.source || "-"}</td>
+                  <td className="px-4 py-3">{row.email || "-"}</td>
                   <td className="px-4 py-3">{row.actReached ?? "-"}</td>
                   <td className="px-4 py-3">{row.sent ? "yes" : "no"}</td>
                   <td className="px-4 py-3">{row.shares}</td>
@@ -86,7 +90,7 @@ export default async function AdminPage({
               ))}
               {recent.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={6}>
+                    <td className="px-4 py-6 text-muted" colSpan={7}>
                     No sessions yet.
                   </td>
                 </tr>

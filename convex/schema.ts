@@ -18,5 +18,7 @@ export default defineSchema({
     shares: v.number(),
     sent: v.optional(v.boolean()),
     contactName: v.optional(v.union(v.string(), v.null())),
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
   }).index("by_createdAt", ["createdAt"]),
 });

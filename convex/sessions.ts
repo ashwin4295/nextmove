@@ -21,7 +21,11 @@ function extractedAct(roadmap: unknown): number | null {
 }
 
 export const create = mutationGeneric({
-  args: { source: v.string() },
+  args: {
+    source: v.string(),
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     return await ctx.db.insert("sessions", {
       createdAt: Date.now(),
@@ -33,6 +37,8 @@ export const create = mutationGeneric({
       shares: 0,
       sent: false,
       contactName: null,
+      ...(args.name ? { name: args.name } : {}),
+      ...(args.email ? { email: args.email } : {}),
     });
   },
 });
@@ -162,6 +168,21 @@ export const listRecent = queryGeneric({
       actReached: r.actReached,
       sent: r.sent ?? false,
       shares: r.shares ?? 0,
+      email: r.email ?? null,
     }));
+  },
+});
+
+export const countUnique = queryGeneric({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("sessions").collect();
+    const emails = new Set<string>();
+    for (const r of rows) {
+      if (r.roadmap != null && r.email) {
+        emails.add(r.email.toLowerCase());
+      }
+    }
+    return emails.size;
   },
 });

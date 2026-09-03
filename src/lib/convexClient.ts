@@ -14,6 +14,8 @@ export type SessionDoc = {
   shares: number;
   sent: boolean;
   contactName: string | null;
+  name: string | null;
+  email: string | null;
 };
 
 export type Stats = {
@@ -35,10 +37,15 @@ export type RecentRow = {
   actReached: number | null;
   sent: boolean;
   shares: number;
+  email: string | null;
 };
 
 export type SessionStore = {
-  create: (args: { source: string }) => Promise<string>;
+  create: (args: {
+    source: string;
+    name?: string;
+    email?: string;
+  }) => Promise<string>;
   finish: (args: {
     id: string;
     transcript: TranscriptTurn[];
@@ -56,6 +63,7 @@ export type SessionStore = {
   get: (args: { id: string }) => Promise<SessionDoc | null>;
   stats: () => Promise<Stats>;
   listRecent: (args: { limit: number }) => Promise<RecentRow[]>;
+  countUnique: () => Promise<number>;
 };
 
 type MemoryRow = SessionDoc;
@@ -85,6 +93,32 @@ function getMemoryMap(): Map<string, MemoryRow> {
   return g.__nextmoveSessions;
 }
 
+type SessionExtras = { name: string | null; email: string | null };
+
+function extrasMap(): Map<string, SessionExtras> {
+  const g = globalThis as typeof globalThis & {
+    __nextmoveExtras?: Map<string, SessionExtras>;
+  };
+  if (!g.__nextmoveExtras) {
+    g.__nextmoveExtras = new Map();
+  }
+  return g.__nextmoveExtras;
+}
+
+function rememberExtras(id: string, extras: SessionExtras) {
+  extrasMap().set(id, extras);
+}
+
+function countUniqueFrom(rows: { roadmap: unknown; email: string | null }[]) {
+  const emails = new Set<string>();
+  for (const r of rows) {
+    if (r.roadmap != null && r.email) {
+      emails.add(r.email.toLowerCase());
+    }
+  }
+  return emails.size;
+}
+
 function hydrate(row: {
   _id: string;
   createdAt: number;
@@ -96,6 +130,8 @@ function hydrate(row: {
   shares: number;
   sent?: boolean;
   contactName?: string | null;
+  name?: string | null;
+  email?: string | null;
 }): SessionDoc {
   const nextMove = normalizeNextMove(row.roadmap);
   const blob =
@@ -109,6 +145,17 @@ function hydrate(row: {
     (typeof blob?.__contactName === "string" ? blob.__contactName : null) ??
     nextMove?.contact.name ??
     null;
+  const extras = extrasMap().get(String(row._id));
+  const name =
+    row.name ??
+    (typeof blob?.__name === "string" ? blob.__name : null) ??
+    extras?.name ??
+    null;
+  const email =
+    row.email ??
+    (typeof blob?.__email === "string" ? blob.__email : null) ??
+    extras?.email ??
+    null;
   return {
     _id: String(row._id),
     createdAt: row.createdAt,
@@ -120,11 +167,13 @@ function hydrate(row: {
     shares: row.shares ?? 0,
     sent,
     contactName,
+    name,
+    email,
   };
 }
 
 const memoryStore: SessionStore = {
-  async create({ source }) {
+  async create({ source, name, email }) {
     const id = `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     getMemoryMap().set(id, {
       _id: id,
@@ -137,6 +186,8 @@ const memoryStore: SessionStore = {
       shares: 0,
       sent: false,
       contactName: null,
+      name: name?.trim() || null,
+      email: email?.trim() || null,
     });
     return id;
   },
@@ -197,7 +248,11 @@ const memoryStore: SessionStore = {
         actReached: r.actReached,
         sent: r.sent,
         shares: r.shares,
+        email: r.email,
       }));
+  },
+  async countUnique() {
+    return countUniqueFrom([...getMemoryMap().values()]);
   },
 };
 
@@ -231,14 +286,33 @@ function convexStore(url: string): SessionStore {
   }
 
   return {
-    async create({ source }) {
-      const id = String(
-        await client().mutation(anyApi.sessions.create, { source }),
-      );
-      rememberId(id);
-      return id;
+    async create({ source, name, email }) {
+      const extras = {
+        name: name?.trim() || null,
+        email: email?.trim() || null,
+      };
+      try {
+        const id = String(
+          await client().mutation(anyApi.sessions.create, {
+            source,
+            ...(extras.name ? { name: extras.name } : {}),
+            ...(extras.email ? { email: extras.email } : {}),
+          }),
+        );
+        rememberId(id);
+        rememberExtras(id, extras);
+        return id;
+      } catch {
+        const id = String(
+          await client().mutation(anyApi.sessions.create, { source }),
+        );
+        rememberId(id);
+        rememberExtras(id, extras);
+        return id;
+      }
     },
     async finish({ id, transcript, roadmap, actReached }) {
+      const extras = extrasMap().get(id);
       const merged =
         roadmap && typeof actReached === "number"
           ? {
@@ -249,9 +323,17 @@ function convexStore(url: string): SessionStore {
                 | 3,
             }
           : roadmap;
+      const withMeta =
+        merged && extras
+          ? {
+              ...merged,
+              ...(extras.email ? { __email: extras.email } : {}),
+              ...(extras.name ? { __name: extras.name } : {}),
+            }
+          : merged;
       // Do not send extra args: production Convex still has the M-A finish signature
       // until the operator deploys. actReached is baked into the stored object.
-      await finishViaExisting(id, transcript, merged);
+      await finishViaExisting(id, transcript, withMeta);
     },
     async selectPath({ id, path }) {
       await client().mutation(anyApi.sessions.selectPath, { id, path });
@@ -328,6 +410,7 @@ function convexStore(url: string): SessionStore {
         return rows.map((r) => ({
           ...r,
           _id: String(r._id),
+          email: r.email ?? extrasMap().get(String(r._id))?.email ?? null,
         }));
       } catch {
         const ids = recentIdList().slice(0, Math.min(Math.max(limit, 1), 25));
@@ -346,7 +429,25 @@ function convexStore(url: string): SessionStore {
             actReached: r.actReached,
             sent: r.sent,
             shares: r.shares,
+            email: r.email,
           }));
+      }
+    },
+    async countUnique() {
+      try {
+        const n = await client().query(anyApi.sessions.countUnique, {});
+        return typeof n === "number" ? n : 0;
+      } catch {
+        const ids = recentIdList();
+        const rows = await Promise.all(
+          ids.map(async (id) => {
+            const row = await client().query(anyApi.sessions.get, { id });
+            return row ? hydrate(row as SessionDoc) : null;
+          }),
+        );
+        return countUniqueFrom(
+          rows.filter((r): r is SessionDoc => r != null),
+        );
       }
     },
   };

@@ -21,6 +21,7 @@ export default async function NextMovePage({
       transcript={session.transcript}
       sent={session.sent}
       contactName={session.contactName}
+      source={session.source}
     />
   );
 }
