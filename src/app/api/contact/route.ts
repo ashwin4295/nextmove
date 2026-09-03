@@ -3,6 +3,7 @@ import { store } from "@/lib/convexClient";
 import { draftMessage, normalizeNextMove } from "@/lib/extract";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const body = (await req.json()) as { id?: string; contactName?: string };
