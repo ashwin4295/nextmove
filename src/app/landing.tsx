@@ -661,9 +661,9 @@ export function Landing({ source }: { source: string }) {
       <Section id="example">
         <h2>A clearer direction. With the reasoning behind it.</h2>
         <p className="mt-5 max-w-[68ch]">
-          Career advice is either free and generic or ₹20,000 an hour, and both
-          end in a document. The first conversation is what actually moves
-          people. NextMove tells you which door, why, and who to talk to first.
+          Career advice is either free and generic or $200-$300 an hour. The
+          first conversation is what actually moves people. NextMove tells you
+          which door, why, and who to talk to first.
         </p>
         <div className="mt-10">
           <ResultBrief />
