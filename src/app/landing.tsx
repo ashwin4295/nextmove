@@ -348,7 +348,7 @@ function StepCanvas() {
 function HowCanvas({ stage }: { stage: number }) {
   const panels = [<StoryCanvas key="0" />, <DoorsCanvas key="1" />, <StepCanvas key="2" />];
   return (
-    <Card className="min-h-[420px] p-6 md:p-8">
+    <Card className="min-h-[260px] p-6 md:p-8">
       <div className="scene-fade h-full">{panels[stage]}</div>
     </Card>
   );
