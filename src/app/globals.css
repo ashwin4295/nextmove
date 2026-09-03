@@ -89,7 +89,6 @@ h2,
 
 @media (prefers-reduced-motion: no-preference) {
   html.js-anim .reveal:not(.in-view) {
-    opacity: 0;
     transform: translateY(16px);
   }
 
