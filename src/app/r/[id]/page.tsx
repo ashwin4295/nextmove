@@ -5,8 +5,8 @@ import { RoadmapView } from "./RoadmapView";
 
 function toPublicRoadmap(roadmap: Roadmap | null) {
   if (!roadmap) return null;
-  const pub = { ...roadmap };
-  delete pub.privateItems;
+  const { privateItems: _omit, ...pub } = roadmap;
+  void _omit;
   return pub;
 }
 
