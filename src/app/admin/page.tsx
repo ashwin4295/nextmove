@@ -51,15 +51,18 @@ export default async function AdminPage({
         <Eyebrow className="mt-8">COUNTERS</Eyebrow>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {counters.map(([name, count]) => (
-            <div key={name} className="rounded-[12px] border border-line bg-surface p-4">
+            <div
+              key={name}
+              className="rounded-2xl border border-line bg-surface p-4"
+            >
               <p className="text-sm text-muted">{name}</p>
-              <p className="font-display text-3xl font-medium">{count}</p>
+              <p className="text-3xl font-semibold">{count}</p>
             </div>
           ))}
         </div>
 
         <Eyebrow className="mt-12">LAST 25 SESSIONS</Eyebrow>
-        <div className="mt-4 overflow-x-auto rounded-[12px] border border-line bg-surface">
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-surface">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-muted">
@@ -82,7 +85,7 @@ export default async function AdminPage({
                   <td className="px-4 py-3">{row.sent ? "yes" : "no"}</td>
                   <td className="px-4 py-3">{row.shares}</td>
                   <td className="px-4 py-3">
-                    <a href={`/r/${row._id}`} className="text-accent underline">
+                    <a href={`/r/${row._id}`} className="text-forest underline">
                       /r/{row._id.slice(0, 8)}
                     </a>
                   </td>
@@ -90,7 +93,7 @@ export default async function AdminPage({
               ))}
               {recent.length === 0 ? (
                 <tr>
-                    <td className="px-4 py-6 text-muted" colSpan={7}>
+                  <td className="px-4 py-6 text-muted" colSpan={7}>
                     No sessions yet.
                   </td>
                 </tr>

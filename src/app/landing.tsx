@@ -1,24 +1,26 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { rememberSource } from "@/lib/analytics";
 import {
+  Badge,
   Button,
   Card,
   Container,
   Eyebrow,
+  RouteLine,
   Section,
+  StateLabel,
+  Waveform,
   Wordmark,
 } from "@/lib/ui";
 
-function StartForm({
-  source,
-  id,
-}: {
-  source: string;
-  id?: string;
-}) {
+const inputClass =
+  "w-full min-h-12 rounded-[10px] border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-muted";
+
+function StartForm({ source, id }: { source: string; id?: string }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -72,14 +74,14 @@ function StartForm({
 
   return (
     <form id={id} className="flex flex-col gap-3" onSubmit={onSubmit}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <input
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Your first name"
           autoComplete="given-name"
-          className="w-full rounded-[10px] border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-muted sm:max-w-xs"
+          className={inputClass}
         />
         <input
           required
@@ -88,21 +90,491 @@ function StartForm({
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Your email"
           autoComplete="email"
-          className="w-full rounded-[10px] border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-muted sm:max-w-xs"
+          className={inputClass}
         />
-        <Button type="submit" disabled={busy}>
-          {busy ? "Starting…" : "Start the conversation"}
-        </Button>
       </div>
+      <Button type="submit" disabled={busy} className="w-full sm:w-auto">
+        {busy ? "Starting…" : "Start a conversation"}
+      </Button>
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      <p className="text-sm text-muted">
-        Free during Build Week. Voice or text. Nothing is shared without your
-        say.
-      </p>
-      <p className="text-sm text-muted">
-        We email your next move so you can find it again. No newsletter.
-      </p>
     </form>
+  );
+}
+
+function AccordionMark({ open }: { open: boolean }) {
+  return (
+    <span
+      className="ml-4 inline-flex size-11 shrink-0 items-center justify-center text-xl font-medium text-muted"
+      aria-hidden
+    >
+      {open ? "−" : "+"}
+    </span>
+  );
+}
+
+function HeroScene() {
+  return (
+    <Card shadow className="p-5 md:p-6">
+      <p className="mb-5 inline-flex rounded-full bg-sage px-2.5 py-1 text-[13px] font-medium text-muted">
+        Illustrative example
+      </p>
+      <div className="flex gap-3 sm:gap-4">
+        <div className="w-8 shrink-0 self-stretch">
+          <RouteLine variant="hero" />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-6 text-[15px] leading-relaxed">
+          <div>
+            <div className="flex items-start gap-3">
+              <Waveform state="idle" />
+              <p className="font-medium">
+                Priya, 8 years in customer operations
+              </p>
+            </div>
+            <p className="mt-2 font-display text-[1.05rem] leading-snug">
+              I like improving how things work. Lately I&apos;m only reporting
+              on dashboards.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["Wants ownership", "Needs income stability", "Enjoys improving systems"].map(
+              (chip) => (
+                <span
+                  key={chip}
+                  className="rounded-full bg-sage px-3 py-1 text-[15px] text-ink"
+                >
+                  {chip}
+                </span>
+              ),
+            )}
+          </div>
+          <div>
+            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
+              Next move
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="font-semibold">Business operations</p>
+              <Badge tone="realistic" />
+            </div>
+            <p className="mt-2 text-muted">
+              Builds on your systems experience. The broader scope and the
+              day-to-day still need testing.
+            </p>
+            <p className="mt-3 text-[15px] text-ink">
+              First message → to Meera, ex-colleague now in business ops
+            </p>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+const RECOGNISE = [
+  {
+    q: "I'm doing well. I'm not sure I want more of this.",
+    a: "The conversation starts with what changed, not with job titles. Doing well and wanting out is a real signal, not ingratitude.",
+  },
+  {
+    q: "I want a change without starting from zero.",
+    a: "Most good moves are adjacent. The coach looks for the door that reuses what you already know.",
+  },
+  {
+    q: "I can see several paths. I don't know which fits.",
+    a: "You will be asked which one pulls you, and then what you would give up. That is usually where the answer is.",
+  },
+  {
+    q: "I'm not sure I need a new role, or a different way to work.",
+    a: "Staying and reshaping the role is one of the doors, and the coach will say so if that is the honest read.",
+  },
+];
+
+function Recognise() {
+  const [open, setOpen] = useState(0);
+
+  return (
+    <div>
+      {RECOGNISE.map((item, i) => {
+        const isOpen = open === i;
+        return (
+          <details
+            key={item.q}
+            open={isOpen}
+            className="border-t border-line last:border-b"
+            onToggle={(e) => {
+              e.preventDefault();
+            }}
+          >
+            <summary
+              className="flex cursor-pointer items-center justify-between gap-4 py-5 text-left font-semibold"
+              onClick={(e) => {
+                e.preventDefault();
+                setOpen(isOpen ? -1 : i);
+              }}
+            >
+              <span>{item.q}</span>
+              <AccordionMark open={isOpen} />
+            </summary>
+            {isOpen ? (
+              <div className="pb-5">
+                <p className="max-w-[62ch] text-muted">{item.a}</p>
+                <Button variant="ghost" href="#start" className="mt-3 px-0">
+                  Start here
+                </Button>
+              </div>
+            ) : null}
+          </details>
+        );
+      })}
+    </div>
+  );
+}
+
+const HOW_STAGES = [
+  {
+    label: "Tell your story",
+    line: "About ten minutes. What changed, what you are moving toward, what has to stay true.",
+  },
+  {
+    label: "See the doors",
+    line: "Two or three directions, each with an honest read on how real it is for you.",
+  },
+  {
+    label: "Take one step",
+    line: "One named person, one drafted message, one experiment, one date.",
+  },
+] as const;
+
+const MEERA_MESSAGE =
+  "Hi Meera, I have been in customer operations for eight years and lately I am only reporting on dashboards. I want to move into business operations, and you are the person I know who already did. Could I get twenty minutes to ask what the week actually looks like? Completely fine if this month is too full.";
+
+function StoryCanvas() {
+  return (
+    <div className="flex h-full flex-col justify-between text-[15px]">
+      <div>
+        <div className="flex items-center gap-3">
+          <Waveform state="idle" />
+          <StateLabel>Listening</StateLabel>
+        </div>
+        <p className="mt-5 font-display text-xl leading-snug">
+          What&apos;s prompting this now? What changed in the last six months?
+        </p>
+        <div className="mt-5 flex flex-col gap-3 text-muted">
+          <p>
+            <span className="font-semibold text-ink">Priya: </span>
+            I like improving how things work. Lately I&apos;m only reporting on
+            dashboards.
+          </p>
+          <p>
+            <span className="font-semibold text-ink">Priya: </span>
+            I still need the income to stay stable. I just want ownership of
+            the system, not another report.
+          </p>
+        </div>
+      </div>
+      <div className="mt-6 flex flex-wrap gap-2 text-[15px] font-medium text-ink">
+        <span className="rounded-[10px] border border-line px-4 py-2">Mute</span>
+        <span className="rounded-[10px] border border-line px-4 py-2">End</span>
+        <span className="px-2 py-2 underline-offset-2">Switch to text</span>
+      </div>
+    </div>
+  );
+}
+
+function DoorsCanvas() {
+  const rows: {
+    name: string;
+    tone: "realistic" | "strong fit" | "a stretch";
+    why: string;
+    check: string;
+  }[] = [
+    {
+      name: "Business operations",
+      tone: "realistic",
+      why: "Builds on your systems experience and the ownership you want.",
+      check: "The broader scope and the day-to-day still need testing.",
+    },
+    {
+      name: "Customer operations elsewhere",
+      tone: "strong fit",
+      why: "Same craft, with more room to improve how things work.",
+      check: "Whether a new team gives you ownership, not another dashboard.",
+    },
+    {
+      name: "Product management",
+      tone: "a stretch",
+      why: "You like improving systems. Product sits next to that craft.",
+      check: "You have not done the role, and the income floor has to stay true.",
+    },
+  ];
+  return (
+    <div className="flex h-full flex-col justify-center gap-4 text-[15px]">
+      {rows.map((row) => (
+        <div key={row.name} className="border-b border-line pb-4 last:border-0 last:pb-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold">{row.name}</p>
+            <Badge tone={row.tone} />
+          </div>
+          <p className="mt-1">{row.why}</p>
+          <p className="mt-1 text-muted">
+            <span className="font-medium text-ink">What needs checking. </span>
+            {row.check}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StepCanvas() {
+  return (
+    <div className="flex h-full flex-col justify-center">
+      <Card shadow className="p-5">
+        <p className="text-[15px] font-semibold">To: Meera · ex-colleague</p>
+        <p className="mt-3 text-[15px] leading-relaxed">{MEERA_MESSAGE}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="inline-flex h-[44px] items-center rounded-[10px] bg-forest px-4 text-[15px] font-semibold text-white">
+            Copy message
+          </span>
+          <span className="inline-flex h-[44px] items-center rounded-[10px] border border-line px-4 text-[15px] font-semibold">
+            I sent it
+          </span>
+        </div>
+      </Card>
+      <p className="mt-4 text-[15px] font-medium">Decision date: 15 October</p>
+    </div>
+  );
+}
+
+function HowCanvas({ stage }: { stage: number }) {
+  const panels = [<StoryCanvas key="0" />, <DoorsCanvas key="1" />, <StepCanvas key="2" />];
+  return (
+    <Card className="min-h-[420px] p-6 md:p-8">
+      <div className="scene-fade h-full">{panels[stage]}</div>
+    </Card>
+  );
+}
+
+function HowItWorks() {
+  const [stage, setStage] = useState(0);
+
+  return (
+    <>
+      <div className="hidden md:block">
+        <div className="grid grid-cols-3 gap-6">
+          {HOW_STAGES.map((item, i) => {
+            const selected = stage === i;
+            return (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => setStage(i)}
+                className="min-h-11 rounded-[10px] text-left"
+              >
+                <span
+                  className={`mb-3 block h-1 w-10 rounded-full ${selected ? "bg-forest" : "bg-line"}`}
+                />
+                <p className={`text-[15px] ${selected ? "font-semibold" : "font-medium"}`}>
+                  <span className="text-muted">{i + 1}. </span>
+                  {item.label}
+                </p>
+                <p className="mt-1 text-[15px] text-muted">{item.line}</p>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-8">
+          <HowCanvas stage={stage} />
+        </div>
+      </div>
+      <div className="flex flex-col gap-8 md:hidden">
+        {HOW_STAGES.map((item, i) => (
+          <div key={item.label}>
+            <p className="text-[15px] font-semibold">
+              <span className="text-muted">{i + 1}. </span>
+              {item.label}
+            </p>
+            <p className="mt-1 text-[15px] text-muted">{item.line}</p>
+            <div className="mt-4">
+              <HowCanvas stage={i} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+const BRIEF_OPTIONS: {
+  name: string;
+  tone: "realistic" | "strong fit" | "a stretch";
+  why: string;
+  check: string;
+  trade: string;
+  test: string;
+}[] = [
+  {
+    name: "Business operations",
+    tone: "realistic",
+    why: "You already improve how things work. Broader operations reuse that craft with more ownership.",
+    check: "The scope is wider, and the day-to-day still needs a real look.",
+    trade: "You leave a function you know for a seat that is less mapped.",
+    test: "A twenty-minute conversation with Meera about what the week actually looks like.",
+  },
+  {
+    name: "Customer operations elsewhere",
+    tone: "strong fit",
+    why: "Same craft, a different team, and a chance to stop only reporting on dashboards.",
+    check: "Whether the new role is ownership or another reporting loop.",
+    trade: "You move, but you may still be in the same kind of work.",
+    test: "Ask two people who left similar teams what actually changed in the first month.",
+  },
+  {
+    name: "Product management",
+    tone: "a stretch",
+    why: "Improving systems sits next to product. The pull is real; the proof is not there yet.",
+    check: "You have not done the role, and income stability has to stay true.",
+    trade: "A longer ramp, and a title that does not reuse your current evidence.",
+    test: "Sit with one product manager for a working session before you treat it as the door.",
+  },
+];
+
+function ResultBrief() {
+  return (
+    <Card className="p-6 md:p-8">
+      <p className="inline-flex rounded-full bg-sage px-3 py-1 text-[13px] font-medium text-muted">
+        Illustrative brief · Priya, 8 years in customer operations
+      </p>
+      <h3 className="mt-6 text-lg font-semibold">What we heard</h3>
+      <div className="mt-4 grid gap-6 md:grid-cols-2">
+        <div>
+          <p className="text-[15px] font-semibold">Moving away from</p>
+          <p className="mt-1 text-[15px] text-muted">
+            Only reporting on dashboards, with little ownership of how things
+            work.
+          </p>
+        </div>
+        <div>
+          <p className="text-[15px] font-semibold">Moving toward</p>
+          <p className="mt-1 text-[15px] text-muted">
+            Broader operations work that lets her improve the system, not just
+            describe it.
+          </p>
+        </div>
+      </div>
+      <p className="mt-5 text-[15px] font-semibold">What has to stay true</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {["Income stability", "Ownership", "Improving systems"].map((chip) => (
+          <span
+            key={chip}
+            className="rounded-full bg-sage px-3 py-1 text-[15px]"
+          >
+            {chip}
+          </span>
+        ))}
+      </div>
+      <div className="mt-8 flex flex-col gap-6">
+        {BRIEF_OPTIONS.map((opt) => (
+          <div key={opt.name} className="border-t border-line pt-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-semibold">{opt.name}</p>
+              <Badge tone={opt.tone} />
+            </div>
+            <div className="mt-3 grid gap-3 text-[15px] md:grid-cols-2">
+              <div>
+                <p className="font-semibold">Why it may fit</p>
+                <p className="mt-1 text-muted">{opt.why}</p>
+              </div>
+              <div>
+                <p className="font-semibold">What needs checking</p>
+                <p className="mt-1 text-muted">{opt.check}</p>
+              </div>
+              <div>
+                <p className="font-semibold">The trade-off</p>
+                <p className="mt-1 text-muted">{opt.trade}</p>
+              </div>
+              <div>
+                <p className="font-semibold">One low-risk test</p>
+                <p className="mt-1 text-muted">{opt.test}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-8 border-t border-line pt-6">
+        <p className="font-semibold">First message → Meera</p>
+        <p className="mt-3 text-[15px] leading-relaxed">{MEERA_MESSAGE}</p>
+        <p className="mt-3 text-[15px] text-muted">
+          You decide whether to send it. Nothing is sent for you.
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+const FAQ = [
+  {
+    q: "Is this an AI or a human coach?",
+    a: "An AI, running a script written by a real coach. For the hard calls, book the human at the end of your result.",
+  },
+  {
+    q: "What if I don't know what I want next?",
+    a: "That is the normal starting point. The first act is about what changed, not what you want.",
+  },
+  {
+    q: "Can I type instead of speaking?",
+    a: "Yes. Type instead works the same way and gives the same result.",
+  },
+  {
+    q: "Will it help me find a job?",
+    a: "No. It helps you decide the direction and start the first conversation. Job search comes after, and it is not this product.",
+  },
+  {
+    q: "Can the next move be staying where I am?",
+    a: "Yes, and the coach will say so if that is the honest read. Stay and reinvent is one of the doors.",
+  },
+  {
+    q: "What does it cost?",
+    a: "Free during Build Week. A paid pack with more drafted messages is coming.",
+  },
+  {
+    q: "What happens to my conversation?",
+    a: "Audio is not stored. The transcript is, so your page works. Nothing is sent to anyone unless you send it.",
+  },
+];
+
+function FaqList() {
+  return (
+    <div>
+      {FAQ.map((item) => (
+        <details key={item.q} className="group border-t border-line last:border-b">
+          <summary className="flex cursor-pointer items-center justify-between gap-4 py-5 text-left font-semibold">
+            <span>{item.q}</span>
+            <span
+              className="ml-4 inline-flex size-11 shrink-0 items-center justify-center text-xl font-medium text-muted group-open:hidden"
+              aria-hidden
+            >
+              +
+            </span>
+            <span
+              className="ml-4 hidden size-11 shrink-0 items-center justify-center text-xl font-medium text-muted group-open:inline-flex"
+              aria-hidden
+            >
+              −
+            </span>
+          </summary>
+          <p className="max-w-[62ch] pb-5 text-muted">{item.a}</p>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+function TrustRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="border-t border-white/20 py-4 first:border-t-0 first:pt-0 last:pb-0">
+      <p className="text-[15px] font-semibold text-white">{label}</p>
+      <p className="mt-1 text-[15px] text-white/80">{children}</p>
+    </div>
   );
 }
 
@@ -127,258 +599,216 @@ export function Landing({ source }: { source: string }) {
       <header
         className={`sticky top-0 z-20 bg-canvas ${scrolled ? "border-b border-line" : ""}`}
       >
-        <Container className="flex items-center justify-between gap-4 py-4">
+        <Container className="flex items-center justify-between gap-3 py-3">
           <a href="#start" className="shrink-0">
             <Wordmark />
           </a>
-          <nav className="hidden items-center gap-6 text-sm font-medium text-ink md:flex">
-            <a href="#how" className="hover:text-accent">
+          <nav className="hidden items-center gap-8 text-[15px] font-medium text-ink md:flex">
+            <a href="#how" className="hover:underline">
               How it works
             </a>
-            <a href="#output" className="hover:text-accent">
-              What you get
+            <a href="#example" className="hover:underline">
+              See an example
             </a>
-            <a href="#faq" className="hover:text-accent">
-              FAQ
+            <a href="#about" className="hover:underline">
+              About
             </a>
           </nav>
-          <Button href="#start" className="shrink-0">
-            Start
+          <Button href="#start" className="shrink-0 px-4 md:px-6">
+            Start a conversation
           </Button>
         </Container>
       </header>
 
-      <Section id="start" className="pt-12 md:pt-20">
-        <div className="grid items-center gap-12 md:grid-cols-2">
-          <div>
-            <Eyebrow>FOR PROFESSIONALS 4 TO 15 YEARS IN · INDIA</Eyebrow>
-            <h1 className="mt-4">
-              Ten minutes. One honest{" "}
-              <span className="text-accent">next move</span>.
-            </h1>
-            <p className="mt-5 max-w-[56ch] text-ink">
-              An AI career coach you talk to. It asks the questions a real
-              coach asks, tells you which door actually fits, and writes the
-              first message to someone you already know in that world. You leave
-              with something to send, not something to read.
+      <Section id="start">
+        <div className="grid items-center gap-12 md:grid-cols-12 md:gap-6">
+          <div className="min-w-0 md:col-span-5">
+            <Eyebrow>A CAREER CONVERSATION, BUILT AROUND YOU</Eyebrow>
+            <h1 className="mt-4">You&apos;ve come this far. What comes next?</h1>
+            <p className="mt-5 max-w-[46ch]">
+              Talk it through with an AI coach for about ten minutes. It asks
+              what a good coach asks, tells you which door actually fits and how
+              real your shot is, and writes the first message to someone you
+              already know in that world.
             </p>
             <div className="mt-8">
               <StartForm source={source} />
             </div>
-            <p className="mt-6 text-sm text-muted">
-              Written by a coach who has guided 1,000+ professionals through
-              career transitions. Ex-Bain. INSEAD MBA.
+            <p className="mt-4 text-[15px] text-muted">
+              About ten minutes · Voice or text · Free during Build Week
+            </p>
+            <p className="mt-3 text-[15px] text-muted">
+              Questions written by a coach who has guided 1,000+ professionals
+              through career transitions. Ex-Bain. INSEAD MBA.
             </p>
           </div>
-
-          <Card shadow className="overflow-hidden border border-line p-5">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="size-3 rounded-full bg-accent card-shadow" />
-                <span className="text-sm font-semibold">NextMove coach</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted">06:40</span>
-                <span className="rounded-full bg-accent-wash px-2.5 py-0.5 text-xs font-semibold text-accent">
-                  Act 2 of 3
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-4 text-sm leading-relaxed">
-              <p>
-                <span className="font-semibold">Coach: </span>
-                Who do you know who is already in that world, or one step ahead
-                of you on it?
-              </p>
-              <p className="text-muted">
-                <span className="font-semibold text-ink">You: </span>
-                Rohan. We were at Flipkart together. He moved into an applied AI
-                product role last year.
-              </p>
-              <p>
-                <span className="font-semibold">Coach: </span>
-                Good. What would you actually want to ask him?
-              </p>
-            </div>
-            <div className="mt-5 flex items-center gap-2 rounded-[10px] bg-wash px-3 py-2 text-sm text-muted">
-              <span className="size-2.5 rounded-full bg-accent" />
-              Drafting your message to Rohan…
-            </div>
-          </Card>
+          <div className="min-w-0 md:col-span-7">
+            <HeroScene />
+          </div>
         </div>
       </Section>
 
-      <Section id="how" band>
-        <Eyebrow>HOW IT WORKS</Eyebrow>
-        <h2 className="mt-3">Talk. Choose a door. Send the first message.</h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {[
-            {
-              n: "01",
-              title: "Talk for ten minutes",
-              body: "Real coaching questions in three short acts: what's prompting this, what you won't give up, which door pulls you. Stop whenever you like.",
-            },
-            {
-              n: "02",
-              title: "Get your next move",
-              body: "One path, graded honestly: strong fit, realistic, a stretch, or long shot. In your own words, not a template. The other doors are listed, so nothing is hidden.",
-            },
-            {
-              n: "03",
-              title: "Send the first message",
-              body: "You name one person already in that world. NextMove drafts the message, you copy it, you send it. That is the moment a transition actually starts.",
-            },
-          ].map((step) => (
-            <Card key={step.n} className="border border-line p-6">
-              <p className="font-display text-sm font-medium text-accent">
-                {step.n}
-              </p>
-              <h3 className="mt-3 font-display text-xl font-medium">
-                {step.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">
-                {step.body}
-              </p>
-            </Card>
-          ))}
+      <Section id="recognise">
+        <div className="grid gap-10 md:grid-cols-12 md:gap-6">
+          <div className="md:col-span-4">
+            <h2>You don&apos;t need a perfect plan to begin.</h2>
+          </div>
+          <div className="md:col-span-8">
+            <Recognise />
+          </div>
         </div>
       </Section>
 
-      <Section id="output">
-        <Eyebrow>WHAT YOU GET</Eyebrow>
-        <h2 className="mt-3">
-          A message you can send tonight, not a plan you&apos;ll admire.
-        </h2>
-        <div className="mt-10 grid items-start gap-10 md:grid-cols-2">
-          <p>
-            Career advice is either free and generic or ₹20,000 an hour, and
-            both end in a document. Nobody drifts another year for lack of a
-            document. They drift because the first conversation never happens.
-            NextMove writes it.
-          </p>
-          <div>
-            <Card shadow className="border border-line p-6">
-              <p className="text-sm font-semibold">To: Rohan</p>
-              <p className="mt-3 leading-relaxed">
-                Hi Rohan, quick one. I&apos;m still running lending product at
-                the fintech, nine years in now, and the honest version is that
-                I&apos;ve been managing dashboards more than building. Your
-                move into applied AI product is the one path I keep coming back
-                to. Could I get twenty minutes to ask how you made the jump
-                without a pay cut, and what you&apos;d do differently?
-                Completely fine if this month is too full.
-              </p>
-            </Card>
-            <p className="mt-3 text-sm text-muted">
-              Path: Applied AI product · realistic
+      <Section id="how" tone="sage">
+        <h2>From your story to a door worth walking through.</h2>
+        <div className="mt-10">
+          <HowItWorks />
+        </div>
+      </Section>
+
+      <Section id="example">
+        <h2>A clearer direction. With the reasoning behind it.</h2>
+        <p className="mt-5 max-w-[68ch]">
+          Career advice is either free and generic or ₹20,000 an hour, and both
+          end in a document. The first conversation is what actually moves
+          people. NextMove tells you which door, why, and who to talk to first.
+        </p>
+        <div className="mt-10">
+          <ResultBrief />
+        </div>
+      </Section>
+
+      <Section id="about" tone="sage">
+        <div className="grid items-start gap-10 md:grid-cols-12 md:gap-6">
+          <div className="order-2 md:order-1 md:col-span-5">
+            <h2 className="hidden md:block">
+              Built around the questions that matter.
+            </h2>
+            <p className="mt-0 md:mt-6">
+              I spent fifteen years inside HR and organisation transformations,
+              and a few more at Bain. The moment I kept seeing was the same: a
+              capable person, nine years in, who knew they wanted a change and
+              could not say what. Free advice was generic. A good coach was
+              ₹20,000 an hour. So I wrote down the questions that actually
+              unlock people, in the order that works, and built a coach that
+              asks them. It is an AI. I am not on the call. But the questions
+              are mine, and I read the transcripts.
             </p>
+            <p className="mt-5 text-[15px] font-medium">
+              Ashwin Shetty · Ex-Bain · INSEAD MBA · 1,000+ professionals
+              coached
+            </p>
+            <ul className="mt-8 border-t border-line">
+              {[
+                "Understand what you want to change, not just your title.",
+                "Take your constraints seriously.",
+                "Leave room for staying, moving sideways, or trying something small first.",
+              ].map((line) => (
+                <li
+                  key={line}
+                  className="border-b border-line py-3 text-[15px]"
+                >
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="order-1 md:order-2 md:col-span-7">
+            <h2 className="mb-6 md:hidden">
+              Built around the questions that matter.
+            </h2>
+            <Image
+              src="/ashwin-founder.jpg"
+              alt="Ashwin Shetty"
+              width={840}
+              height={1050}
+              className="h-auto w-full rounded-2xl object-cover"
+              priority
+            />
           </div>
         </div>
       </Section>
 
-      <Section>
-        <div className="grid gap-8 md:grid-cols-3">
-          {[
-            {
-              title: "Coaching questions, not a quiz",
-              body: "What's prompting this, what you're moving toward, what has to stay true. The questions that unlock people, in a fixed order that works.",
-            },
-            {
-              title: "Honest realism",
-              body: "At least one door is graded a stretch or a long shot. If everything looks easy, nobody is telling you the truth.",
-            },
-            {
-              title: "An action, not analysis",
-              body: "You leave with a message to a real person and a date. Momentum beats certainty.",
-            },
-          ].map((col) => (
-            <div key={col.title}>
-              <h3 className="font-display text-xl font-medium">{col.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">
-                {col.body}
-              </p>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section band>
-        <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-ink">
-            AS
+      <Section id="trust" tone="forest">
+        <div className="grid gap-10 md:grid-cols-12 md:gap-6">
+          <div className="md:col-span-5">
+            <h2 className="text-white">Know what happens to your story.</h2>
           </div>
-          <p className="text-sm leading-relaxed sm:text-base">
-            Ashwin Shetty. Ex-Bain, INSEAD MBA, 15 years in HR and organisation
-            transformation, 1,000+ professionals coached. He left a stable
-            consulting career for the thing he kept coming back to. He wrote
-            these questions.
-          </p>
+          <div className="md:col-span-7">
+            <TrustRow label="Audio">
+              Not stored. Your voice is processed live to make the conversation
+              work and is not kept by NextMove.
+            </TrustRow>
+            <TrustRow label="Transcript">
+              Stored, so your result page and your message keep working.
+              Processed by the AI providers that run the coach; not used to
+              train them by us.
+            </TrustRow>
+            <TrustRow label="Sharing">
+              Your result page is private unless you share the link. Anything
+              you ask to keep private never appears on the shareable card.
+            </TrustRow>
+            <TrustRow label="Sending">
+              Nothing is sent for you. You copy the message and decide.
+            </TrustRow>
+            <a
+              href="#faq"
+              className="mt-4 inline-flex min-h-11 items-center text-[15px] text-white underline-offset-2 hover:underline"
+            >
+              How this works in detail
+            </a>
+          </div>
         </div>
       </Section>
 
       <Section id="faq">
-        <Eyebrow>FAQ</Eyebrow>
-        <div className="mt-6 flex flex-col gap-3">
-          {[
-            {
-              q: "Is this a real coach?",
-              a: "It is an AI coach running a script written by a real one. For the hard calls, book the human at the end.",
-            },
-            {
-              q: "Do I have to use voice?",
-              a: "No. Type instead works the same way and produces the same message.",
-            },
-            {
-              q: "Isn't this just ChatGPT voice mode?",
-              a: "ChatGPT will chat with you for an hour and agree with you. NextMove asks fixed coaching questions, pushes back when your answers conflict, grades your options honestly, and ends with a message to a named person. Then it asks whether you sent it.",
-            },
-            {
-              q: "What happens to what I say?",
-              a: "Your conversation is stored so your page works. Anything you ask to keep private never appears on the shareable card.",
-            },
-            {
-              q: "Can it tell me to stay where I am?",
-              a: "Yes, and it will if the evidence says so. Stay and reinvent is one of the doors.",
-            },
-          ].map((item) => (
-            <details
-              key={item.q}
-              className="rounded-[12px] border border-line bg-surface px-5 py-4"
-            >
-              <summary className="cursor-pointer font-semibold">
-                {item.q}
-              </summary>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{item.a}</p>
-            </details>
-          ))}
+        <div className="grid gap-10 md:grid-cols-12 md:gap-6">
+          <div className="md:col-span-4">
+            <h2>Questions people ask first.</h2>
+          </div>
+          <div className="md:col-span-8">
+            <FaqList />
+          </div>
         </div>
       </Section>
 
-      <Section>
-        <h2>Ten minutes. One message. Send it tonight.</h2>
-        <div className="mt-8">
-          <StartForm source={source} />
+      <Section id="close">
+        <div className="mx-auto max-w-[720px] text-center">
+          <h2>Your next move starts with a conversation.</h2>
+          <p className="mt-4 text-muted">
+            You don&apos;t need to have the answer before you begin.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <Button href="#start">Start a conversation</Button>
+          </div>
+          <p className="mt-4 text-[15px] text-muted">Prefer to type? You can.</p>
+          <div className="mt-10">
+            <RouteLine variant="closing" />
+          </div>
         </div>
       </Section>
 
       <footer className="border-t border-line py-8">
-        <Container className="flex flex-col gap-4 text-sm text-muted md:flex-row md:items-center md:justify-between">
+        <Container className="flex flex-col gap-4 text-[15px] text-muted md:flex-row md:items-center md:justify-between">
           <Wordmark />
-          <p>Built during GrowthX Build Week, September 2026</p>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <a href="#trust" className="hover:text-ink hover:underline">
+              Privacy
+            </a>
             <a
               href="https://github.com/ashwin4295/nextmove"
-              className="hover:text-ink"
+              className="hover:text-ink hover:underline"
             >
               GitHub
             </a>
             <a
               href="https://calendly.com/mbbprepofficial/15min?utm_source=nextmove"
-              className="hover:text-ink"
+              className="hover:text-ink hover:underline"
             >
               Talk to Ashwin
             </a>
           </div>
+          <p>Built during GrowthX Build Week, September 2026</p>
         </Container>
       </footer>
     </div>

@@ -7,10 +7,10 @@ export const contentType = "image/png";
 export const runtime = "nodejs";
 
 const BADGE: Record<string, { fg: string; bg: string }> = {
-  "strong fit": { fg: "#0f766e", bg: "#e6f4f2" },
-  realistic: { fg: "#1d4ed8", bg: "#e8efff" },
-  "a stretch": { fg: "#b45309", bg: "#fff4e5" },
-  "long shot": { fg: "#6b6560", bg: "#f3f1ee" },
+  "strong fit": { fg: "#204B3A", bg: "#E7ECE5" },
+  realistic: { fg: "#1F4E79", bg: "#E4EEF7" },
+  "a stretch": { fg: "#8A5A2B", bg: "#F6EBDD" },
+  "long shot": { fg: "#586257", bg: "#EEF0EC" },
 };
 
 async function loadFont(url: string) {
@@ -30,23 +30,23 @@ export default async function Image({
   const pathName = nextMove?.chosenPath.name ?? "Your next move";
   const realism = nextMove?.chosenPath.realism ?? "";
   const headline = nextMove?.headline ?? "";
-  const badge = BADGE[realism] ?? { fg: "#6b6560", bg: "#f3f1ee" };
+  const badge = BADGE[realism] ?? { fg: "#586257", bg: "#EEF0EC" };
 
-  const [tight, inter] = await Promise.all([
+  const [serif, inter] = await Promise.all([
     loadFont(
-      "https://cdn.jsdelivr.net/fontsource/fonts/inter-tight@latest/latin-500-normal.ttf",
+      "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-500-normal.ttf",
     ),
     loadFont(
-      "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.ttf",
+      "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-600-normal.ttf",
     ),
   ]);
 
   const fonts = [
-    ...(tight
-      ? [{ name: "Inter Tight", data: tight, weight: 500 as const }]
+    ...(serif
+      ? [{ name: "Source Serif 4", data: serif, weight: 500 as const }]
       : []),
     ...(inter
-      ? [{ name: "Inter", data: inter, weight: 400 as const }]
+      ? [{ name: "Inter", data: inter, weight: 600 as const }]
       : []),
   ];
 
@@ -60,13 +60,20 @@ export default async function Image({
           flexDirection: "column",
           justifyContent: "space-between",
           padding: 72,
-          background: "#fafaf9",
-          color: "#0c0a09",
+          background: "#F7F6F2",
+          color: "#20251F",
         }}
       >
-        <div style={{ display: "flex", fontSize: 28, fontWeight: 500 }}>
+        <div
+          style={{
+            display: "flex",
+            fontFamily: "Inter",
+            fontSize: 28,
+            fontWeight: 600,
+          }}
+        >
           <span>Next</span>
-          <span style={{ color: "#0f766e" }}>Move</span>
+          <span style={{ color: "#204B3A" }}>Move</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div
@@ -74,8 +81,7 @@ export default async function Image({
               fontSize: 64,
               fontWeight: 500,
               lineHeight: 1.05,
-              letterSpacing: "-0.02em",
-              fontFamily: "Inter Tight",
+              fontFamily: "Source Serif 4",
             }}
           >
             {pathName}
@@ -100,7 +106,7 @@ export default async function Image({
             <div
               style={{
                 fontSize: 26,
-                color: "#6b6560",
+                color: "#586257",
                 lineHeight: 1.35,
                 maxWidth: 900,
               }}
@@ -114,7 +120,7 @@ export default async function Image({
             display: "flex",
             justifyContent: "flex-end",
             fontSize: 20,
-            color: "#6b6560",
+            color: "#586257",
           }}
         >
           nextmove-pi.vercel.app

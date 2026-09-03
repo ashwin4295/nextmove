@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Inter_Tight } from "next/font/google";
+import { Inter, Source_Serif_4 } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -10,24 +10,24 @@ const inter = Inter({
   display: "swap",
 });
 
-const interTight = Inter_Tight({
+const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
-  weight: ["500"],
-  variable: "--font-inter-tight",
+  weight: ["400", "500"],
+  variable: "--font-source-serif",
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "NextMove",
   description:
-    "An AI career coach you talk to. Ten minutes. You leave with your next move and the first message to send.",
+    "Talk it through with an AI coach for about ten minutes. You leave with a chosen path, an honest realism read, and the first message to someone you already know.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${interTight.variable} h-full antialiased`}
+      className={`${inter.variable} ${sourceSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-canvas text-ink font-sans">
         <Providers>{children}</Providers>

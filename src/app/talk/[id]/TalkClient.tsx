@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { identifyEmail, track } from "@/lib/analytics";
 import { FIRST_MESSAGE, SYSTEM_PROMPT } from "@/lib/script";
 import { userTurnCount, type TranscriptTurn } from "@/lib/extract";
-import { Button, Card, Wordmark } from "@/lib/ui";
+import { Button, StateLabel, Waveform, Wordmark } from "@/lib/ui";
 
 type TalkState =
   | "ready"
@@ -17,11 +17,20 @@ type TalkState =
   | "text"
   | "writing";
 
-const ACT_NAME = {
-  1: "The trigger",
-  2: "The move",
-  3: "Close",
+type VoicePhase = "ready" | "listening" | "thinking" | "speaking";
+
+const PHASE = {
+  1: "Your story",
+  2: "Your options",
+  3: "Your next step",
 } as const;
+
+const VOICE_LABEL: Record<VoicePhase, string> = {
+  ready: "Ready when you are",
+  listening: "Listening",
+  thinking: "Thinking about what you shared",
+  speaking: "Speaking",
+};
 
 function formatElapsed(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -36,22 +45,26 @@ function actFromText(text: string, current: 1 | 2 | 3): 1 | 2 | 3 {
   return current;
 }
 
-function Orb({
-  speaking,
-  dim,
-  still,
-}: {
-  speaking?: boolean;
-  dim?: boolean;
-  still?: boolean;
-}) {
+function PhaseRow({ act }: { act: 1 | 2 | 3 }) {
   return (
-    <div
-      className={`mx-auto rounded-full bg-accent card-shadow ${
-        still ? "size-24" : "size-24"
-      } ${speaking ? "orb-speak" : ""}`}
-      style={{ opacity: dim ? 0.4 : 1 }}
-    />
+    <p className="text-[15px]">
+      {([1, 2, 3] as const).map((n, i) => (
+        <span key={n}>
+          {i > 0 ? <span className="text-muted"> · </span> : null}
+          <span className={act === n ? "font-semibold text-forest" : "text-muted"}>
+            {PHASE[n]}
+          </span>
+        </span>
+      ))}
+    </p>
+  );
+}
+
+function HairlineRow({ children }: { children: string }) {
+  return (
+    <p className="border-t border-line py-4 text-[15px] leading-relaxed last:border-b">
+      {children}
+    </p>
   );
 }
 
@@ -77,7 +90,7 @@ export function TalkClient({
   const [elapsed, setElapsed] = useState(0);
   const [timerOn, setTimerOn] = useState(false);
   const [act, setAct] = useState<1 | 2 | 3>(1);
-  const [speaking, setSpeaking] = useState(false);
+  const [voicePhase, setVoicePhase] = useState<VoicePhase>("ready");
   const [muted, setMuted] = useState(false);
   const [showFull, setShowFull] = useState(false);
   const [draft, setDraft] = useState("");
@@ -118,6 +131,7 @@ export function TalkClient({
     transcriptRef.current = next;
     setTranscript(next);
     if (turn.role === "assistant") setActFrom(turn.text);
+    if (turn.role === "user") setVoicePhase("thinking");
   }
 
   function countUsers() {
@@ -199,6 +213,7 @@ export function TalkClient({
       backgroundSound: "off" as const,
       firstMessageMode: "assistant-speaks-first" as const,
       endCallPhrases: ["next move is being written"],
+      artifactPlan: { recordingEnabled: false },
     };
   }
 
@@ -221,10 +236,11 @@ export function TalkClient({
         }
       },
     );
-    vapi.on("speech-start", () => setSpeaking(true));
-    vapi.on("speech-end", () => setSpeaking(false));
+    vapi.on("speech-start", () => setVoicePhase("speaking"));
+    vapi.on("speech-end", () => setVoicePhase("listening"));
     vapi.on("call-start", () => {
       setState("live");
+      setVoicePhase("ready");
       setTimerOn(true);
     });
     vapi.on("error", (e: unknown) => {
@@ -256,6 +272,7 @@ export function TalkClient({
     setError("");
     setTooShort("");
     setState("connecting");
+    setVoicePhase("ready");
     startedAtRef.current = Date.now();
     try {
       const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY!);
@@ -344,12 +361,30 @@ export function TalkClient({
     vapiRef.current?.setMuted(next);
   }
 
-  const lastTwo = transcript.slice(-2);
-  const status = speaking ? "Coach is speaking" : "Listening";
+  const lastAssistant = [...transcript]
+    .reverse()
+    .find((t) => t.role === "assistant");
+  const lastUser = [...transcript].reverse().find((t) => t.role === "user");
+  const waveState =
+    state === "connecting"
+      ? "connecting"
+      : state === "writing"
+        ? "writing"
+        : voicePhase === "listening" || voicePhase === "speaking"
+          ? voicePhase
+          : "idle";
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[640px] flex-col bg-canvas px-4 pb-28 pt-5">
-      <div className="mb-6 flex items-center justify-between gap-3">
+    <main
+      className={`mx-auto flex min-h-dvh w-full max-w-[560px] flex-col bg-canvas px-5 pt-5 ${
+        state === "text"
+          ? "pb-[calc(17rem+env(safe-area-inset-bottom))]"
+          : state === "live"
+            ? "pb-32"
+            : "pb-10"
+      }`}
+    >
+      <div className="mb-5 flex items-center justify-between gap-3">
         <Link href="/">
           <Wordmark />
         </Link>
@@ -358,72 +393,76 @@ export function TalkClient({
         </Button>
       </div>
 
-      {state === "live" || state === "text" || state === "writing" ? (
-        <div className="mb-6 flex items-center justify-between text-sm">
-          <p className="font-medium">
-            Act {act} of 3 · {ACT_NAME[act]}
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <PhaseRow act={act} />
+        {timerOn ? (
+          <p className="shrink-0 text-sm tabular-nums text-muted">
+            {formatElapsed(elapsed)}
           </p>
-          <p className="tabular-nums text-muted">{formatElapsed(elapsed)}</p>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {state === "ready" ? (
-        <Card className="border border-line p-6">
-          <h1 className="font-display text-2xl font-medium">Before we begin</h1>
-          <ul className="mt-4 flex flex-col gap-3 text-sm leading-relaxed">
-            <li>About ten minutes, in three short acts. Stop any time.</li>
-            <li>Speak naturally. The coach may push back.</li>
-            <li>Nothing here is shared without your say.</li>
-          </ul>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button onClick={beginVoice}>Begin</Button>
+        <div>
+          <h2>Let&apos;s get ready to talk.</h2>
+          <div className="mt-6">
+            <HairlineRow>
+              About ten minutes, in three short parts. Stop any time.
+            </HairlineRow>
+            <HairlineRow>
+              Your voice is not stored. The transcript is, so your result works.
+            </HairlineRow>
+            <HairlineRow>Nothing is sent for you.</HairlineRow>
+          </div>
+          <div className="mt-6 flex flex-col gap-3">
+            <Button onClick={beginVoice}>Enable microphone and start</Button>
             <Button variant="secondary" onClick={openText}>
-              Type instead
+              Write it out instead
             </Button>
           </div>
-        </Card>
+          <p className="mt-4 text-sm text-muted">
+            You&apos;re speaking with an AI. Ashwin is not on the call.
+          </p>
+        </div>
       ) : null}
 
       {state === "connecting" ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16">
-          <Orb dim />
-          <p className="text-muted">Connecting…</p>
+          <Waveform state="connecting" />
+          <StateLabel>Connecting</StateLabel>
         </div>
       ) : null}
 
       {state === "live" ? (
-        <div className="flex flex-1 flex-col items-center">
-          <Orb speaking={speaking} />
-          <p className="mt-4 text-sm text-muted">{status}</p>
-          <div className="mt-8 flex w-full flex-col gap-4">
-            {lastTwo.map((t, i) => (
-              <p
-                key={`${i}-${t.role}`}
-                className={`text-lg leading-relaxed ${
-                  t.role === "assistant" ? "text-ink" : "text-muted"
-                }`}
-              >
-                <span className="font-semibold text-ink">
-                  {t.role === "assistant" ? "Coach" : "You"}:{" "}
-                </span>
-                {t.text}
-              </p>
-            ))}
+        <div className="flex flex-1 flex-col">
+          <div className="flex flex-col items-center gap-3">
+            <Waveform state={waveState} />
+            <StateLabel>{VOICE_LABEL[voicePhase]}</StateLabel>
           </div>
+          {lastAssistant ? (
+            <p className="mt-8 font-display text-[1.25rem] leading-snug">
+              {lastAssistant.text}
+            </p>
+          ) : null}
+          {lastUser ? (
+            <p className="mt-4 text-muted">{lastUser.text}</p>
+          ) : null}
           <button
             type="button"
-            className="mt-6 text-sm text-muted underline"
+            className="mt-6 min-h-11 self-start text-[15px] font-medium text-ink hover:underline"
             onClick={() => setShowFull((v) => !v)}
           >
             {showFull ? "Hide full transcript" : "Show full transcript"}
           </button>
           {showFull ? (
-            <ol className="mt-4 w-full flex-col gap-3">
+            <ol className="mt-4 flex flex-col gap-3">
               {transcript.map((t, i) => (
-                <li key={i} className="text-sm leading-relaxed">
-                  <span className="font-semibold">
-                    {t.role === "assistant" ? "Coach" : "You"}:{" "}
-                  </span>
+                <li
+                  key={i}
+                  className={`text-[15px] leading-relaxed ${
+                    t.role === "assistant" ? "font-display" : "text-muted"
+                  }`}
+                >
                   {t.text}
                 </li>
               ))}
@@ -433,45 +472,106 @@ export function TalkClient({
       ) : null}
 
       {state === "failed" ? (
-        <Card className="border border-line p-6">
-          <h1 className="font-display text-2xl font-medium">
-            I can&apos;t hear you yet.
-          </h1>
-          <p className="mt-3 leading-relaxed text-muted">
+        <div>
+          <h2>Microphone access is blocked.</h2>
+          <p className="mt-4 leading-relaxed">
             Your browser blocked the microphone, or the call dropped. Allow the
-            mic and try again, or type your answers instead. You get the same
-            result either way.
+            mic in the address bar and try again, or write it out instead. You
+            get the same result either way.
           </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3">
             <Button
               onClick={() => {
                 setElapsed(0);
                 beginVoice();
               }}
             >
-              Try voice again
+              Try again
             </Button>
             <Button variant="secondary" onClick={openText}>
-              Type instead
+              Write it out instead
             </Button>
           </div>
-        </Card>
+          <details className="group mt-6">
+            <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-[15px] font-medium hover:underline">
+              How to allow the microphone
+              <span className="text-muted group-open:hidden" aria-hidden>
+                +
+              </span>
+              <span className="hidden text-muted group-open:inline" aria-hidden>
+                −
+              </span>
+            </summary>
+            <ul className="mt-3 flex flex-col gap-2 text-[15px] text-muted">
+              <li>Chrome (lock icon → Site settings → Microphone)</li>
+              <li>Safari (Safari menu → Settings for this website)</li>
+              <li>Mobile (browser site settings, then reload)</li>
+            </ul>
+          </details>
+        </div>
       ) : null}
 
       {state === "text" ? (
-        <div className="flex flex-1 flex-col gap-4">
-          <ol className="flex flex-1 flex-col gap-3 overflow-y-auto">
-            {transcript.map((t, i) => (
-              <li key={i} className="text-sm leading-relaxed">
-                <span className="font-semibold">
-                  {t.role === "assistant" ? "Coach" : "You"}:{" "}
-                </span>
-                {t.text}
-              </li>
-            ))}
-          </ol>
+        <ol className="flex flex-1 flex-col gap-4 overflow-y-auto pb-4">
+          {transcript.map((t, i) => (
+            <li
+              key={i}
+              className={
+                t.role === "assistant"
+                  ? "font-display text-[1.125rem] leading-snug"
+                  : "text-[15px] text-muted"
+              }
+            >
+              {t.text}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
+      {state === "writing" ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16">
+          <Waveform state="writing" />
+          <StateLabel>Writing your next move</StateLabel>
+          <p className="text-sm text-muted">Usually under twenty seconds.</p>
+          {error ? (
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <p className="text-sm text-red-700">{error}</p>
+              <Button
+                onClick={() => {
+                  finishingRef.current = false;
+                  finishNextMove();
+                }}
+              >
+                Try again
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {tooShort ? <p className="mt-4 text-sm text-muted">{tooShort}</p> : null}
+      {error && state !== "writing" ? (
+        <p className="mt-4 text-sm text-red-700">{error}</p>
+      ) : null}
+
+      {state === "live" ? (
+        <div className="fixed inset-x-0 bottom-0 border-t border-line bg-canvas px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="mx-auto flex max-w-[560px] flex-wrap items-center justify-center gap-2">
+            <Button variant="secondary" onClick={toggleMute}>
+              {muted ? "Unmute" : "Mute"}
+            </Button>
+            <Button onClick={seeNextMove}>See my next move</Button>
+            <Button variant="ghost" onClick={openText}>
+              Switch to text
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {state === "text" ? (
+        <div className="fixed inset-x-0 bottom-0 border-t border-line bg-canvas px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <form
-            className="flex flex-col gap-2"
+            className="mx-auto flex w-full max-w-[560px] flex-col gap-2"
             onSubmit={(e) => {
               e.preventDefault();
               sendText();
@@ -490,60 +590,13 @@ export function TalkClient({
               className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-base"
               placeholder="Type your answer"
             />
-            <Button type="submit" disabled={sending || !draft.trim()}>
-              {sending ? "Sending…" : "Send"}
-            </Button>
-          </form>
-        </div>
-      ) : null}
-
-      {state === "writing" ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16">
-          <Orb still />
-          <p className="font-medium">Writing your next move…</p>
-          <p className="text-sm text-muted">Usually under twenty seconds.</p>
-          {error ? (
-            <div className="mt-4 flex flex-col items-center gap-3">
-              <p className="text-sm text-red-700">{error}</p>
-              <Button
-                onClick={() => {
-                  finishingRef.current = false;
-                  finishNextMove();
-                }}
-              >
-                Try again
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button type="submit" disabled={sending || !draft.trim()}>
+                {sending ? "Sending…" : "Send"}
               </Button>
+              <Button onClick={seeNextMove}>See my next move</Button>
             </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {tooShort ? (
-        <p className="mt-4 text-sm text-muted">{tooShort}</p>
-      ) : null}
-      {error && state !== "writing" ? (
-        <p className="mt-4 text-sm text-red-700">{error}</p>
-      ) : null}
-
-      {state === "live" ? (
-        <div className="fixed inset-x-0 bottom-0 border-t border-line bg-canvas px-4 py-3">
-          <div className="mx-auto flex max-w-[640px] flex-wrap items-center justify-center gap-2">
-            <Button variant="secondary" onClick={toggleMute}>
-              {muted ? "Unmute" : "Mute"}
-            </Button>
-            <Button onClick={seeNextMove}>See my next move</Button>
-            <Button variant="ghost" onClick={openText}>
-              Type instead
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {state === "text" ? (
-        <div className="fixed inset-x-0 bottom-0 border-t border-line bg-canvas px-4 py-3">
-          <div className="mx-auto flex max-w-[640px] justify-center">
-            <Button onClick={seeNextMove}>See my next move</Button>
-          </div>
+          </form>
         </div>
       ) : null}
     </main>

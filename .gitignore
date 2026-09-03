@@ -46,3 +46,6 @@ cursor-*.log
 .agents/
 .claude/
 skills-lock.json
+
+# local verification screenshots
+verification/

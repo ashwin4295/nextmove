@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { track } from "@/lib/analytics";
 import type { NextMove, TranscriptTurn } from "@/lib/extract";
-import { Badge, Button, Card, Container, Eyebrow, Wordmark } from "@/lib/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Container,
+  Eyebrow,
+  RouteLine,
+  Wordmark,
+} from "@/lib/ui";
 
 type PublicNextMove = Omit<NextMove, "privateItems">;
 
@@ -53,6 +61,10 @@ export function NextMoveView({
     nextMove?.contact.name ?? initialContactName,
   );
   const [contactRelation] = useState(nextMove?.contact.relation ?? null);
+  const [showCorrection, setShowCorrection] = useState(false);
+  const [correction, setCorrection] = useState("");
+  const [correctBusy, setCorrectBusy] = useState(false);
+  const [correctError, setCorrectError] = useState("");
 
   const userTurns = transcript.filter(
     (t) => t.role === "user" && t.text.trim(),
@@ -162,22 +174,52 @@ export function NextMoveView({
     track("pack_clicked", { session_id: id, source });
   }
 
+  async function submitCorrection() {
+    const text = correction.trim();
+    if (!text || !nextMove || correctBusy) return;
+    setCorrectBusy(true);
+    setCorrectError("");
+    try {
+      const res = await fetch("/api/roadmap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          transcript: [
+            ...transcript,
+            { role: "user" as const, text: `Correction: ${text}` },
+          ],
+          actReached: nextMove.actReached,
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok || data.error) {
+        setCorrectError("Could not update. Try again.");
+        return;
+      }
+      track("result_corrected", { session_id: id, source });
+      window.location.reload();
+    } catch {
+      setCorrectError("Could not update. Try again.");
+    } finally {
+      setCorrectBusy(false);
+    }
+  }
+
   if (!nextMove) {
     return (
-      <main className="mx-auto flex min-h-full w-full max-w-[720px] flex-col gap-6 px-4 py-8">
+      <main className="mx-auto flex min-h-full w-full max-w-[720px] flex-col gap-6 px-5 py-8">
         <Wordmark />
         {userTurns < 2 ? (
-          <p className="font-display text-2xl font-medium leading-snug">
+          <p className="font-display text-2xl font-normal leading-snug">
             This conversation was too short for an honest answer.{" "}
-            <Link href="/" className="text-accent underline">
+            <Link href="/" className="text-forest underline">
               Start again.
             </Link>
           </p>
         ) : (
           <div>
-            <h1 className="font-display text-3xl font-medium">
-              Not written yet
-            </h1>
+            <h1>Not written yet</h1>
             <div className="mt-6">
               <Button onClick={writeNow} disabled={writing}>
                 {writing ? "Writing…" : "Write it now"}
@@ -200,7 +242,10 @@ export function NextMoveView({
     <main className="min-h-full bg-canvas pb-16">
       <Container className="max-w-[720px] py-8">
         <Wordmark />
-        <Eyebrow className="mt-8">YOUR NEXT MOVE</Eyebrow>
+        <div className="mt-8">
+          <RouteLine variant="result" />
+        </div>
+        <Eyebrow className="mt-6">YOUR NEXT MOVE</Eyebrow>
         <h1 className="mt-3">{nextMove.chosenPath.name}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Badge tone={nextMove.chosenPath.realism} />
@@ -210,9 +255,68 @@ export function NextMoveView({
           {TRIGGER_SENTENCE[nextMove.trigger] ?? TRIGGER_SENTENCE.drift}
         </p>
 
-        <Eyebrow className="mt-12">THE FIRST MESSAGE</Eyebrow>
-        <Card shadow className="mt-4 border border-line p-6">
-          <p className="text-sm font-semibold">{toLine}</p>
+        <Card className="mt-10 p-6">
+          <p className="text-lg font-semibold">What we heard</p>
+          <div className="mt-5 grid gap-6 sm:grid-cols-2">
+            <div>
+              <p className="text-[15px] font-semibold">Moving away from</p>
+              <p className="mt-1 text-[15px] leading-relaxed text-muted">
+                {nextMove.awayFrom}
+              </p>
+            </div>
+            <div>
+              <p className="text-[15px] font-semibold">Moving toward</p>
+              <p className="mt-1 text-[15px] leading-relaxed text-muted">
+                {nextMove.toward}
+              </p>
+            </div>
+          </div>
+          <p className="mt-5 text-[15px] font-semibold">What has to stay true</p>
+          {nextMove.anchors.length > 0 ? (
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {nextMove.anchors.map((a) => (
+                <li
+                  key={a}
+                  className="rounded-full bg-sage px-3 py-1 text-[15px] text-ink"
+                >
+                  {a}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <button
+            type="button"
+            className="mt-5 min-h-11 text-[15px] font-medium text-ink hover:underline"
+            onClick={() => setShowCorrection((v) => !v)}
+          >
+            That&apos;s not quite right
+          </button>
+          {showCorrection ? (
+            <div className="mt-3 flex flex-col gap-3">
+              <textarea
+                value={correction}
+                onChange={(e) => setCorrection(e.target.value)}
+                rows={4}
+                className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-base"
+                placeholder="Tell the coach what it got wrong"
+              />
+              <Button
+                onClick={submitCorrection}
+                disabled={correctBusy || !correction.trim()}
+                className="self-start"
+              >
+                {correctBusy ? "Updating…" : "Update my next move"}
+              </Button>
+              {correctError ? (
+                <p className="text-sm text-red-700">{correctError}</p>
+              ) : null}
+            </div>
+          ) : null}
+        </Card>
+
+        <Card shadow className="mt-8 p-6">
+          <p className="text-[15px] font-semibold">The first message</p>
+          <p className="mt-3 text-sm font-semibold">{toLine}</p>
           <p className="mt-4 select-text leading-relaxed">{message}</p>
           {!contactName ? (
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -220,7 +324,7 @@ export function NextMoveView({
                 value={nameDraft}
                 onChange={(e) => setNameDraft(e.target.value)}
                 placeholder="Who do you know in this world? First name"
-                className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-base"
+                className="w-full min-h-12 rounded-[10px] border border-line bg-surface px-3 py-2 text-base"
               />
               <Button
                 onClick={writeForThem}
@@ -234,90 +338,45 @@ export function NextMoveView({
             <Button onClick={copyMessage}>
               {copied ? "Copied" : "Copy message"}
             </Button>
-            <Button
-              variant="secondary"
-              onClick={markSent}
-              disabled={sent}
-            >
+            <Button variant="secondary" onClick={markSent} disabled={sent}>
               {sent ? "Sent ✓" : "I sent it"}
             </Button>
           </div>
+          <p className="mt-4 text-[15px] text-muted">
+            You decide whether to send it. Nothing is sent for you.
+          </p>
         </Card>
 
-        <Eyebrow className="mt-12">WHAT HAS TO STAY TRUE</Eyebrow>
-        {nextMove.anchors.length > 0 ? (
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {nextMove.anchors.map((a) => (
-              <li
-                key={a}
-                className="rounded-full bg-wash px-3 py-1 text-sm text-ink"
-              >
-                {a}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          <div>
-            <p className="text-sm font-semibold">Moving away from</p>
-            <p className="mt-1 text-sm leading-relaxed text-muted">
-              {nextMove.awayFrom}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm font-semibold">Moving toward</p>
-            <p className="mt-1 text-sm leading-relaxed text-muted">
-              {nextMove.toward}
-            </p>
-          </div>
-        </div>
-
         {nextMove.otherPaths.length > 0 ? (
-          <>
-            <Eyebrow className="mt-12">THE OTHER DOORS</Eyebrow>
-            <ul className="mt-4 flex flex-col gap-4">
+          <div className="mt-10">
+            <p className="text-lg font-semibold">The other doors</p>
+            <ul className="mt-4 flex flex-col">
               {nextMove.otherPaths.map((path) => (
-                <li key={path.name} className="border-b border-line pb-4">
+                <li key={path.name} className="border-t border-line py-5">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold">{path.name}</p>
                     <Badge tone={path.realism} />
                   </div>
-                  <p className="mt-1 text-sm leading-relaxed">{path.whyItFits}</p>
-                  <p className="mt-1 text-sm text-muted">{path.firstGap}</p>
+                  <p className="mt-3 text-[15px] font-semibold">Why it may fit</p>
+                  <p className="mt-1 text-[15px] leading-relaxed">
+                    {path.whyItFits}
+                  </p>
+                  <p className="mt-3 text-[15px] font-semibold">
+                    What needs checking
+                  </p>
+                  <p className="mt-1 text-[15px] text-muted">{path.firstGap}</p>
                 </li>
               ))}
             </ul>
-          </>
+          </div>
         ) : null}
 
-        <Card className="mt-12 bg-accent-wash p-6">
-          <p className="font-display text-lg font-medium">Your next 30 days</p>
+        <Card className="mt-8 border-0 bg-sage p-6">
+          <p className="text-lg font-semibold">Your next 30 days</p>
           <p className="mt-3 leading-relaxed">{nextMove.experiment}</p>
-          <p className="mt-3 text-sm font-medium">
+          <p className="mt-3 text-[15px] font-medium">
             Decision date: {formatDecisionDate(nextMove.decisionDate)}
           </p>
-        </Card>
-
-        <Eyebrow className="mt-12">GO FURTHER</Eyebrow>
-        <Card className="mt-4 border border-line p-6">
-          <p className="font-display text-lg font-medium">The Next Move Pack</p>
-          <p className="mt-3 leading-relaxed">
-            Three more messages written for you: one to a hiring manager in that
-            world, one to a mentor you admire, and one to your current manager
-            for the internal version of this move. Plus a two-week follow-up
-            plan and a re-run of this conversation after you have had the first
-            one.
-          </p>
-          <p className="mt-3 text-sm font-medium">₹499, one time.</p>
-          <div className="mt-5">
-            {process.env.NEXT_PUBLIC_PAY_LINK ? (
-              <Button onClick={onPack}>Get the pack</Button>
-            ) : (
-              <Button className="opacity-50" onClick={onPack}>
-                Coming Saturday
-              </Button>
-            )}
-          </div>
         </Card>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -332,14 +391,46 @@ export function NextMoveView({
           </Button>
         </div>
 
-        <details className="mt-10 rounded-[12px] border border-line bg-surface px-5 py-4">
-          <summary className="cursor-pointer font-semibold">
+        <Card className="mt-10 p-6">
+          <p className="text-lg font-semibold">The Next Move Pack</p>
+          <p className="mt-3 leading-relaxed">
+            Three more messages written for you: one to a hiring manager in that
+            world, one to a mentor you admire, and one to your current manager
+            for the internal version of this move. Plus a two-week follow-up
+            plan and a re-run of this conversation after you have had the first
+            one.
+          </p>
+          <p className="mt-3 text-[15px] font-medium">₹499, one time.</p>
+          <div className="mt-5">
+            {process.env.NEXT_PUBLIC_PAY_LINK ? (
+              <Button onClick={onPack}>Get the pack</Button>
+            ) : (
+              <Button className="opacity-50" onClick={onPack}>
+                Coming Saturday
+              </Button>
+            )}
+          </div>
+        </Card>
+
+        <details className="group mt-10 border-t border-b border-line py-4">
+          <summary className="flex cursor-pointer items-center justify-between gap-3 font-semibold">
             Read the transcript
+            <span className="text-muted group-open:hidden" aria-hidden>
+              +
+            </span>
+            <span className="hidden text-muted group-open:inline" aria-hidden>
+              −
+            </span>
           </summary>
           <ol className="mt-4 flex flex-col gap-3">
             {transcript.map((t, i) => (
-              <li key={i} className="text-sm leading-relaxed">
-                <span className="font-semibold">
+              <li
+                key={i}
+                className={`text-[15px] leading-relaxed ${
+                  t.role === "assistant" ? "font-display" : "text-muted"
+                }`}
+              >
+                <span className="font-sans font-semibold text-ink">
                   {t.role === "assistant" ? "Coach" : "You"}:{" "}
                 </span>
                 {t.text}
