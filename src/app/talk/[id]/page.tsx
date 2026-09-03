@@ -175,13 +175,17 @@ function TalkInner() {
           : ("claude-sonnet-4-6" as const),
         messages: [{ role: "system" as const, content: SYSTEM_PROMPT }],
       },
-      voice: budget
-        ? { provider: "deepgram" as const, model: "aura-2", voiceId: "thalia" }
-        : {
-            provider: "11labs" as const,
-            voiceId: "EXAVITQu4vr4xnSDxMaL",
-            model: "eleven_turbo_v2_5",
-          },
+      // Aura-2 by default: ElevenLabs via Vapi failed with
+      // pipeline-error-eleven-labs-voice-failed (account credential).
+      // Set NEXT_PUBLIC_VOICE_TIER=eleven to opt back in once fixed.
+      voice:
+        process.env.NEXT_PUBLIC_VOICE_TIER === "eleven"
+          ? {
+              provider: "11labs" as const,
+              voiceId: "EXAVITQu4vr4xnSDxMaL",
+              model: "eleven_turbo_v2_5",
+            }
+          : { provider: "deepgram" as const, model: "aura-2", voiceId: "thalia" },
       transcriber: {
         provider: "deepgram" as const,
         model: "nova-2",
