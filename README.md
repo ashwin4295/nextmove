@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NextMove
 
-## Getting Started
+**An AI career coach you talk to. Ten minutes. One honest next move.**
 
-First, run the development server:
+Live: https://nextmove-pi.vercel.app
+Built solo during GrowthX Build Week, Season 03 (29 Aug to 5 Sep 2026).
+
+## The one-paragraph test
+
+Priya, 33, Senior PM at a fintech in Bangalore, nine years in. Every review cycle she knows she wants a change but cannot say what: applied AI, consulting, an MBA, or just a bigger role where she is. Today she reads LinkedIn, takes a quiz, asks two friends, and drifts another year, because a real coach costs ₹20,000 an hour and free advice is generic. NextMove asks her the questions a good coach asks, tells her which door actually fits and how realistic it is, and writes the first message to someone she already knows in that world. She leaves with something to send, not something to read.
+
+## What it does
+
+1. **Talk for ten minutes.** A voice conversation (or typed, same result) in three short acts: what is prompting this, what has to stay true about your life, which door pulls you, and who you already know one step ahead.
+2. **Get your next move.** One path graded honestly (strong fit, realistic, a stretch, long shot), in your own words. The other doors are listed so nothing is hidden. At least one is always graded a stretch or a long shot.
+3. **Send the first message.** NextMove drafts the message to the person you named. Copy it, send it, press "I sent it". That is the moment a transition actually starts.
+
+The questions come from a coach who has guided 1,000+ professionals through career transitions, and from the transition literature (Ibarra on experiments over introspection, Schein on career anchors, Bridges on endings).
+
+## Why it is not ChatGPT voice mode
+
+ChatGPT will chat for an hour and agree with you. NextMove runs a fixed coaching script, pushes back when your answers conflict, grades your options against a real base rate, ends with a message to a named person, and then asks whether you sent it.
+
+## Stack
+
+- Next.js 16 (App Router), Tailwind v4, deployed on Vercel
+- Convex for sessions, transcripts, next-move records and counters
+- Vapi web SDK for the voice call (Claude Sonnet 4.6 in-call, Deepgram Nova-2 speech-to-text, Deepgram Aura-2 voice)
+- Claude Sonnet 5 for extraction: transcript in, structured next move plus drafted message out
+- Built with Claude Code and the Cursor agent
+
+## Run it locally
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in the keys below
+npx convex dev               # creates a Convex dev deployment, writes NEXT_PUBLIC_CONVEX_URL
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Environment variables:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Name | Purpose |
+|---|---|
+| `NEXT_PUBLIC_VAPI_PUBLIC_KEY` | Vapi web calls |
+| `ANTHROPIC_API_KEY` | extraction and the typed fallback |
+| `NEXT_PUBLIC_CONVEX_URL` | written by `npx convex dev` |
+| `ADMIN_KEY` | optional, gates `/admin?key=` |
+| `NEXT_PUBLIC_VOICE_TIER` | optional: `budget` (Haiku plus Aura-2) or `eleven` (ElevenLabs voice) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Without `NEXT_PUBLIC_CONVEX_URL` the app runs on an in-memory store for local testing.
 
-## Learn More
+## Routes
 
-To learn more about Next.js, take a look at the following resources:
+| Route | What |
+|---|---|
+| `/` | landing and start |
+| `/talk/[id]` | the conversation (voice, with typed fallback) |
+| `/r/[id]` | your next move, the first message, other doors, share |
+| `/admin?key=` | counters: started, act reached, written, sent, shared, last 25 sessions |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Build Week log
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Thu 3 Sep: idea locked (late), milestone A ugly flow live by 10:40, milestone B (ten-minute script, first-message output, design system) live by 11:30, three production bugs fixed from live testing (Vercel 10 s timeout on extraction, mic-denied call generating an empty result, sections hidden before animation), voice failure traced through Vapi logs to an ElevenLabs credential and moved to Aura-2.
+- Fri 4 Sep: three observed user sessions, distribution to GrowthX, WhatsApp, LinkedIn and email, fixes.
+- Sat 5 Sep: verification, numbers, submission.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Plans and reports are in the repo root (`IDEA_SCOPE.md`, `PLAN-M-A.md`, `PLAN-M-B.md`, `MILESTONE-*-REPORT.md`).
