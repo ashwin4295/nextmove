@@ -176,8 +176,12 @@ function TalkInner() {
         messages: [{ role: "system" as const, content: SYSTEM_PROMPT }],
       },
       voice: budget
-        ? { provider: "deepgram" as const, voiceId: "aura-2-thalia-en" }
-        : { provider: "11labs" as const, voiceId: "paula" },
+        ? { provider: "deepgram" as const, model: "aura-2", voiceId: "thalia" }
+        : {
+            provider: "11labs" as const,
+            voiceId: "EXAVITQu4vr4xnSDxMaL",
+            model: "eleven_turbo_v2_5",
+          },
       transcriber: {
         provider: "deepgram" as const,
         model: "nova-2",
@@ -217,7 +221,8 @@ function TalkInner() {
       setState("live");
       setTimerOn(true);
     });
-    vapi.on("error", () => {
+    vapi.on("error", (e: unknown) => {
+      console.error("vapi error", e);
       setTimerOn(false);
       setState("failed");
     });
