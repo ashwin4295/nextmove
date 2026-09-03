@@ -400,7 +400,7 @@ export function NextMoveView({
             plan and a re-run of this conversation after you have had the first
             one.
           </p>
-          <p className="mt-3 text-[15px] font-medium">₹499, one time.</p>
+          <p className="mt-3 text-[15px] font-medium">₹99, one time.</p>
           <div className="mt-5">
             {process.env.NEXT_PUBLIC_PAY_LINK ? (
               <Button onClick={onPack}>Get the pack</Button>
