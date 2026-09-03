@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { rememberSource } from "@/lib/analytics";
@@ -610,9 +609,6 @@ export function Landing({ source }: { source: string }) {
             <a href="#example" className="hover:underline">
               See an example
             </a>
-            <a href="#about" className="hover:underline">
-              About
-            </a>
           </nav>
           <Button href="#start" className="shrink-0 px-4 md:px-6">
             Start a conversation
@@ -675,57 +671,6 @@ export function Landing({ source }: { source: string }) {
         </p>
         <div className="mt-10">
           <ResultBrief />
-        </div>
-      </Section>
-
-      <Section id="about" tone="sage">
-        <div className="grid items-start gap-10 md:grid-cols-12 md:gap-6">
-          <div className="order-2 md:order-1 md:col-span-5">
-            <h2 className="hidden md:block">
-              Built around the questions that matter.
-            </h2>
-            <p className="mt-0 md:mt-6">
-              I spent fifteen years inside HR and organisation transformations,
-              and a few more at Bain. The moment I kept seeing was the same: a
-              capable person, nine years in, who knew they wanted a change and
-              could not say what. Free advice was generic. A good coach was
-              ₹20,000 an hour. So I wrote down the questions that actually
-              unlock people, in the order that works, and built a coach that
-              asks them. It is an AI. I am not on the call. But the questions
-              are mine, and I read the transcripts.
-            </p>
-            <p className="mt-5 text-[15px] font-medium">
-              Ashwin Shetty · Ex-Bain · INSEAD MBA · 1,000+ professionals
-              coached
-            </p>
-            <ul className="mt-8 border-t border-line">
-              {[
-                "Understand what you want to change, not just your title.",
-                "Take your constraints seriously.",
-                "Leave room for staying, moving sideways, or trying something small first.",
-              ].map((line) => (
-                <li
-                  key={line}
-                  className="border-b border-line py-3 text-[15px]"
-                >
-                  {line}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="order-1 md:order-2 md:col-span-7">
-            <h2 className="mb-6 md:hidden">
-              Built around the questions that matter.
-            </h2>
-            <Image
-              src="/ashwin-founder.jpg"
-              alt="Ashwin Shetty"
-              width={840}
-              height={1050}
-              className="h-auto w-full rounded-2xl object-cover"
-              priority
-            />
-          </div>
         </div>
       </Section>
 
