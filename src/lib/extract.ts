@@ -1,6 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { formatProfileFields, type Profile } from "./profile";
 
+export class DuplicateLabelError extends Error {
+  labels: string[];
+  constructor(labels: string[]) {
+    super(`duplicate door labels: ${labels.join(", ")}`);
+    this.labels = labels;
+  }
+}
+
 export type TranscriptTurn = { role: "assistant" | "user"; text: string };
 export type Realism = "strong fit" | "realistic" | "a stretch" | "long shot";
 export type PathOption = {
@@ -141,7 +149,7 @@ export function toPublicNextMove(nextMove: NextMove | null): Omit<
   return pub;
 }
 
-export function normalizeNextMove(raw: unknown): NextMove | null {
+export function normalizeNextMove(raw: unknown, opts?: { lenient?: boolean }): NextMove | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
 
@@ -158,10 +166,29 @@ export function normalizeNextMove(raw: unknown): NextMove | null {
     : legacyPaths.slice(1);
   {
     const norm = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    const names = [chosen, ...others].map((p) => norm(p.name));
-    if (new Set(names).size !== names.length) {
-      console.error("duplicate path names", names);
-      return null;
+    const all = [chosen, ...others];
+    const seen = new Map<string, number>();
+    const dupes: string[] = [];
+    for (const p of all) {
+      const k = norm(p.name);
+      seen.set(k, (seen.get(k) ?? 0) + 1);
+      if ((seen.get(k) ?? 0) > 1) dupes.push(p.name);
+    }
+    if (dupes.length) {
+      if (!opts?.lenient) {
+        throw new DuplicateLabelError(dupes);
+      }
+      // Second failure: keep the result, make every label distinct on screen.
+      const used = new Set<string>();
+      for (const p of all) {
+        let label = p.name;
+        if (used.has(norm(label))) label = `${p.name}, ${p.realism}`;
+        let n = 2;
+        while (used.has(norm(label))) label = `${p.name} (${n++})`;
+        p.name = label;
+        used.add(norm(label));
+      }
+      console.error("duplicate path labels kept and disambiguated", dupes);
     }
   }
 
@@ -282,9 +309,13 @@ export async function extractNextMove(
     ? `${EXTRACT_PROMPT}\n\nProfile informs realism and specificity; the transcript wins on intent and constraints.`
     : EXTRACT_PROMPT;
 
-  async function parseOnce(text: string, label: string): Promise<NextMove> {
+  async function parseOnce(
+    text: string,
+    label: string,
+    lenient = false,
+  ): Promise<NextMove> {
     try {
-      const parsed = normalizeNextMove(extractJson(text));
+      const parsed = normalizeNextMove(extractJson(text), { lenient });
       if (!parsed) throw new Error("Missing chosenPath");
       return parsed;
     } catch (err) {
@@ -299,11 +330,15 @@ export async function extractNextMove(
   const text = await claudeText(system, user, 2500);
   try {
     return await parseOnce(text, "first failure");
-  } catch {
-    const retryUser = `${user}\n\nYour previous output was not valid JSON matching the type. Return only the JSON.`;
+  } catch (firstErr) {
+    const reason =
+      firstErr instanceof DuplicateLabelError
+        ? `Your previous result gave two doors the same label (${firstErr.labels.join(", ")}). Every door must have a distinct, specific role name that says what makes it different from the others. Return only the JSON.`
+        : "Your previous output was not valid JSON matching the type. Return only the JSON.";
+    const retryUser = `${user}\n\n${reason}`;
     const retryText = await claudeText(system, retryUser, 2500);
     try {
-      return await parseOnce(retryText, "retry failure");
+      return await parseOnce(retryText, "retry failure", true);
     } catch (err) {
       throw new Error(
         `Failed to parse next-move JSON: ${err instanceof Error ? err.message : String(err)}`,

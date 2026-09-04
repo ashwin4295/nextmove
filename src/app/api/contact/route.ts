@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   }
 
   const session = await store.get({ id });
-  const nextMove = normalizeNextMove(session?.roadmap);
+  const nextMove = normalizeNextMove(session?.roadmap, { lenient: true });
   if (!session || !nextMove) {
     return NextResponse.json({ error: "no next move" }, { status: 400 });
   }

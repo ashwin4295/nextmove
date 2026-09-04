@@ -191,7 +191,7 @@ function hydrate(row: {
   profileStatus?: ProfileStatus;
   profile?: unknown;
 }): SessionDoc {
-  const nextMove = normalizeNextMove(row.roadmap);
+  const nextMove = normalizeNextMove(row.roadmap, { lenient: true });
   const blob =
     row.roadmap && typeof row.roadmap === "object"
       ? (row.roadmap as Record<string, unknown>)
