@@ -24,14 +24,13 @@ export async function POST(req: Request) {
   }
   const rawLinkedin =
     typeof body.linkedinUrl === "string" ? body.linkedinUrl : "";
-  let linkedinUrl: string | undefined;
-  if (rawLinkedin.trim()) {
-    const normalised = normalizeLinkedInUrl(rawLinkedin);
-    if (!normalised) {
-      return NextResponse.json({ error: "invalid linkedin" }, { status: 400 });
-    }
-    linkedinUrl = normalised;
+  const normalised = rawLinkedin.trim()
+    ? normalizeLinkedInUrl(rawLinkedin)
+    : null;
+  if (!normalised) {
+    return NextResponse.json({ error: "invalid linkedin" }, { status: 400 });
   }
+  const linkedinUrl: string = normalised;
   const caps = await store.caps({ email });
   if (capsExceeded(caps, "email")) {
     return NextResponse.json({ error: "email_cap" });

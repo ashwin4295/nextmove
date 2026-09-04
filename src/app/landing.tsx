@@ -45,15 +45,16 @@ function StartForm({ source, id }: { source: string; id?: string }) {
       return;
     }
     const trimmedLinkedin = linkedin.trim();
-    let linkedinUrl: string | undefined;
-    if (trimmedLinkedin) {
-      const normalised = normalizeLinkedInUrl(trimmedLinkedin);
-      if (!normalised) {
-        setError("That doesn't look like a LinkedIn profile link.");
-        return;
-      }
-      linkedinUrl = normalised;
+    if (!trimmedLinkedin) {
+      setError("Add your LinkedIn profile link to start.");
+      return;
     }
+    const normalised = normalizeLinkedInUrl(trimmedLinkedin);
+    if (!normalised) {
+      setError("That doesn't look like a LinkedIn profile link.");
+      return;
+    }
+    const linkedinUrl: string = normalised;
     setBusy(true);
     setError("");
     setCapMessage("");
@@ -65,7 +66,7 @@ function StartForm({ source, id }: { source: string; id?: string }) {
           source,
           name: name.trim(),
           email: trimmedEmail,
-          ...(linkedinUrl ? { linkedinUrl } : {}),
+          linkedinUrl,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -136,9 +137,10 @@ function StartForm({ source, id }: { source: string; id?: string }) {
         />
       </div>
       <input
+        required
         value={linkedin}
         onChange={(e) => setLinkedin(e.target.value)}
-        placeholder="linkedin.com/in/yourname (optional)"
+        placeholder="linkedin.com/in/yourname"
         autoComplete="url"
         inputMode="url"
         className={inputClass}
@@ -688,8 +690,8 @@ export function Landing({ source }: { source: string }) {
               About ten minutes · Voice or text · Try for free till September 6
             </p>
             <p className="mt-1 text-[15px] text-muted">
-              If you add your LinkedIn, the coach reads the public profile and
-              skips the basics. We never post, connect, or message anyone.
+              The coach reads your public LinkedIn profile and skips the
+              basics. We never post, connect, or message anyone.
             </p>
           </div>
           <div className="min-w-0 md:col-span-7">
