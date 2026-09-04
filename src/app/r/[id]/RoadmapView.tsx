@@ -569,8 +569,9 @@ export function NextMoveView({
                 </p>
               </details>
               <p className="mt-4 text-[15px] font-medium">
-                ₹299 till September 6, then ₹999. Ready within a minute of
-                paying.
+                <s className="mr-2 font-normal text-muted">₹999</s>
+                <span className="text-lg">₹299</span> till September 6. Ready
+                within a minute of paying.
               </p>
               <div className="mt-5">
                 <Button onClick={onPack} disabled={packBusy}>
