@@ -45,6 +45,11 @@ function StartForm({ source, id }: { source: string; id?: string }) {
       setError("Enter a valid email.");
       return;
     }
+    const phoneDigits = phone.replace(/[^0-9]/g, "");
+    if (phoneDigits.length < 8 || phoneDigits.length > 15) {
+      setError("Add the WhatsApp number we should send your result to.");
+      return;
+    }
     const trimmedLinkedin = linkedin.trim();
     if (!trimmedLinkedin) {
       setError("Add your LinkedIn profile link to start.");
@@ -157,8 +162,9 @@ function StartForm({ source, id }: { source: string; id?: string }) {
         />
       </label>
       <label className="flex flex-col gap-1.5 text-[14px] font-medium text-ink">
-        WhatsApp number <span className="font-normal text-muted">(optional, for the paid pack)</span>
+        WhatsApp number <span className="font-normal text-muted">(we WhatsApp you your result)</span>
         <input
+          required
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="+91 98765 43210"

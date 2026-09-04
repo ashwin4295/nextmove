@@ -39,6 +39,9 @@ export async function POST(req: Request) {
   const rawPhone = typeof body.phone === "string" ? body.phone : "";
   const digits = rawPhone.replace(/[^0-9]/g, "");
   const phone = digits.length >= 8 && digits.length <= 15 ? (digits.length === 10 ? `91${digits}` : digits) : undefined;
+  if (!phone) {
+    return NextResponse.json({ error: "invalid phone" }, { status: 400 });
+  }
   const id = await store.create({ source, name, email, linkedinUrl, phone });
   if (capsExceeded(caps, "daily")) {
     return NextResponse.json({ id, error: "daily_cap" });
