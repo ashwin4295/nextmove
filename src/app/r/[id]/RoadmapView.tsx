@@ -421,6 +421,27 @@ export function NextMoveView({
           </p>
         </Card>
 
+        {/consult|strateg/i.test(nextMove.chosenPath.name) ? (
+          <Card className="mt-6 p-6">
+            <p className="text-lg font-semibold">Consulting is your door.</p>
+            <p className="mt-3 leading-relaxed">
+              The gap between wanting it and getting an offer is the case
+              interview, and it is trainable. MBB Prep is where the same coach
+              who wrote these questions trains people for it: AI mock cases,
+              drills, and a free masterclass every week.
+            </p>
+            <div className="mt-4">
+              <Button
+                href="https://mbbprep.com/?utm_source=nextmove&utm_medium=result&utm_campaign=consulting_door"
+                variant="secondary"
+                onClick={() => track("mbbprep_clicked", { session_id: id })}
+              >
+                See how MBB Prep works
+              </Button>
+            </div>
+          </Card>
+        ) : null}
+
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Button onClick={share}>
             {shared ? "Link copied" : "Share this page"}
