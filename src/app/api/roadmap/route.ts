@@ -45,6 +45,7 @@ function sendNextMoveEmail(
     },
     body: JSON.stringify({
       from: "NextMove <nextmove@mbbprep.com>",
+      reply_to: "ashwin4295@gmail.com",
       to: [email],
       subject: `Your next move: ${nextMove.chosenPath.name}`,
       text,

@@ -28,14 +28,14 @@ export default function PrivacyPage() {
       </LegalSection>
       <LegalSection title="Retention and deletion">
         We keep your transcript and result so your page keeps working. Email
-        nextmove@mbbprep.com from the address you used and we delete everything
+        ashwin4295@gmail.com from the address you used and we delete everything
         within seven days.
       </LegalSection>
       <LegalSection title="Analytics">
         We record which buttons you use and where you came from. We do not send
         your transcript to analytics.
       </LegalSection>
-      <LegalSection title="Contact">nextmove@mbbprep.com</LegalSection>
+      <LegalSection title="Contact">ashwin4295@gmail.com</LegalSection>
     </LegalDoc>
   );
 }

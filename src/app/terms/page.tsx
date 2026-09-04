@@ -11,7 +11,7 @@ export default function TermsPage() {
         The conversation is free until 6 September 2026. The Next Move Pack
         costs ₹299 till 6 September 2026 and ₹999 after that, paid through Razorpay. Because the pack is generated for you
         within minutes, it is not refundable once delivered. If it does not
-        arrive within 24 hours, email nextmove@mbbprep.com and we refund or
+        arrive within 24 hours, email ashwin4295@gmail.com and we refund or
         resend.
       </LegalSection>
       <LegalSection title="Your content">

@@ -65,6 +65,7 @@ function sendPackEmail(email: string, pack: Pack, id: string, origin: string) {
     },
     body: JSON.stringify({
       from: "NextMove <nextmove@mbbprep.com>",
+      reply_to: "ashwin4295@gmail.com",
       to: [email],
       subject: "Your Next Move Pack",
       text,
