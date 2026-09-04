@@ -26,7 +26,7 @@ export default async function Image({
 }) {
   const { id } = await params;
   const session = await store.get({ id });
-  const nextMove = normalizeNextMove(session?.roadmap);
+  const nextMove = normalizeNextMove(session?.roadmap, { lenient: true });
   const pathName = nextMove?.chosenPath.name ?? "Your next move";
   const realism = nextMove?.chosenPath.realism ?? "";
   const headline = nextMove?.headline ?? "";
