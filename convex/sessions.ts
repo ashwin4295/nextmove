@@ -223,7 +223,11 @@ export const caps = queryGeneric({
         const id = String(r._id);
         if (seen.has(id)) continue;
         seen.add(id);
-        if (typeof r.startedAt === "number") emailStarted += 1;
+        const used =
+          typeof r.startedAt === "number" ||
+          r.roadmap != null ||
+          (Array.isArray(r.transcript) && r.transcript.length > 0);
+        if (used) emailStarted += 1;
       }
     }
 
