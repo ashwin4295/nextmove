@@ -118,33 +118,42 @@ function StartForm({ source, id }: { source: string; id?: string }) {
   return (
     <form id={id} className="flex flex-col gap-3" onSubmit={onSubmit}>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <input
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Your first name"
-          autoComplete="given-name"
-          className={inputClass}
-        />
-        <input
-          required
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Your email"
-          autoComplete="email"
-          className={inputClass}
-        />
+        <label className="flex flex-1 flex-col gap-1.5 text-[14px] font-medium text-ink">
+          First name
+          <input
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your first name"
+            autoComplete="given-name"
+            className={inputClass}
+          />
+        </label>
+        <label className="flex flex-1 flex-col gap-1.5 text-[14px] font-medium text-ink">
+          Email
+          <input
+            required
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Your email"
+            autoComplete="email"
+            className={inputClass}
+          />
+        </label>
       </div>
-      <input
-        required
-        value={linkedin}
-        onChange={(e) => setLinkedin(e.target.value)}
-        placeholder="linkedin.com/in/yourname"
-        autoComplete="url"
-        inputMode="url"
-        className={inputClass}
-      />
+      <label className="flex flex-col gap-1.5 text-[14px] font-medium text-ink">
+        LinkedIn profile
+        <input
+          required
+          value={linkedin}
+          onChange={(e) => setLinkedin(e.target.value)}
+          placeholder="linkedin.com/in/yourname"
+          autoComplete="url"
+          inputMode="url"
+          className={inputClass}
+        />
+      </label>
       <Button type="submit" disabled={busy} className="w-full sm:w-auto">
         {busy ? "Starting…" : "Start a conversation"}
       </Button>
@@ -655,14 +664,14 @@ export function Landing({ source }: { source: string }) {
         className={`sticky top-0 z-20 bg-canvas ${scrolled ? "border-b border-line" : ""}`}
       >
         <Container className="flex items-center justify-between gap-3 py-3">
-          <a href="#start" className="shrink-0">
+          <a href="#start" className="inline-flex min-h-11 shrink-0 items-center" aria-label="NextMove">
             <Wordmark />
           </a>
           <nav className="hidden items-center gap-8 text-[15px] font-medium text-ink md:flex">
-            <a href="#how" className="hover:underline">
+            <a href="#how" className="inline-flex min-h-11 items-center hover:underline">
               How it works
             </a>
-            <a href="#example" className="hover:underline">
+            <a href="#example" className="inline-flex min-h-11 items-center hover:underline">
               See an example
             </a>
           </nav>
@@ -791,17 +800,19 @@ export function Landing({ source }: { source: string }) {
 
       <footer className="border-t border-line py-8">
         <Container className="flex flex-col gap-4 text-[15px] text-muted md:flex-row md:items-center md:justify-between">
-          <Wordmark />
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <a href="/privacy" className="hover:text-ink hover:underline">
+          <a href="/" className="inline-flex min-h-11 items-center" aria-label="NextMove home">
+            <Wordmark />
+          </a>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <a href="/privacy" className="inline-flex min-h-11 items-center px-3 hover:text-ink hover:underline">
               Privacy
             </a>
-            <a href="/terms" className="hover:text-ink hover:underline">
+            <a href="/terms" className="inline-flex min-h-11 items-center px-3 hover:text-ink hover:underline">
               Terms
             </a>
             <a
               href="https://github.com/ashwin4295/nextmove"
-              className="hover:text-ink hover:underline"
+              className="inline-flex min-h-11 items-center px-3 hover:text-ink hover:underline"
             >
               GitHub
             </a>
