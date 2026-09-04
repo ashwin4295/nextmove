@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         amount: 29900,
         currency: "INR",
         accept_partial: false,
-        description: "NextMove Pack",
+        description: "NextMove: 3 drafted messages + 2-week plan",
         reference_id: id.slice(0, 40),
         notify: { sms: false, email: false },
         reminder_enable: false,
