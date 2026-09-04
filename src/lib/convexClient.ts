@@ -6,6 +6,7 @@ import { asPack, normalizeNextMove } from "./extract";
 import { asProfile, type Profile, type ProfileStatus } from "./profile";
 
 export type SessionDoc = {
+  phone?: string | null;
   _id: string;
   createdAt: number;
   source: string;
@@ -62,6 +63,7 @@ export type SessionStore = {
     name?: string;
     email?: string;
     linkedinUrl?: string;
+    phone?: string;
   }) => Promise<string>;
   setProfile: (args: {
     id: string;
@@ -130,6 +132,7 @@ function getMemoryMap(): Map<string, MemoryRow> {
 }
 
 type SessionExtras = {
+  phone?: string | null;
   name: string | null;
   email: string | null;
   payLinkUrl?: string | null;
@@ -282,7 +285,7 @@ function hydrate(row: {
 }
 
 const memoryStore: SessionStore = {
-  async create({ source, name, email, linkedinUrl }) {
+  async create({ source, name, email, linkedinUrl, phone }) {
     const id = `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const url = linkedinUrl?.trim() || null;
     getMemoryMap().set(id, {
@@ -298,6 +301,7 @@ const memoryStore: SessionStore = {
       contactName: null,
       name: name?.trim() || null,
       email: email?.trim() || null,
+      phone: phone?.trim() || null,
       payLinkUrl: null,
       payLinkId: null,
       paid: false,
@@ -453,8 +457,9 @@ function convexStore(url: string): SessionStore {
   }
 
   return {
-    async create({ source, name, email, linkedinUrl }) {
+    async create({ source, name, email, linkedinUrl, phone }) {
       const extras: SessionExtras = {
+        phone: phone?.trim() || null,
         name: name?.trim() || null,
         email: email?.trim() || null,
         linkedinUrl: linkedinUrl?.trim() || null,
@@ -480,6 +485,7 @@ function convexStore(url: string): SessionStore {
             source,
             ...(extras.name ? { name: extras.name } : {}),
             ...(extras.email ? { email: extras.email } : {}),
+            ...(extras.phone ? { phone: extras.phone } : {}),
             ...(extras.linkedinUrl
               ? {
                   linkedinUrl: extras.linkedinUrl,
@@ -498,6 +504,8 @@ function convexStore(url: string): SessionStore {
               source,
               ...(extras.name ? { name: extras.name } : {}),
               ...(extras.email ? { email: extras.email } : {}),
+              ...(extras.phone ? { phone: extras.phone } : {}),
+            ...(extras.phone ? { phone: extras.phone } : {}),
             }),
           );
           await persistLink(id);

@@ -20,6 +20,33 @@ function requestOriginFromHeaders(h: Headers) {
   return "https://nextmove.thedirectorloop.com";
 }
 
+function sendPackWhatsApp(
+  phone: string,
+  name: string,
+  door: string,
+  id: string,
+  origin: string,
+) {
+  const key = process.env.AISENSY_API_KEY;
+  const campaign = process.env.AISENSY_PACK_CAMPAIGN;
+  if (!key || !campaign) return;
+  fetch("https://backend.aisensy.com/campaign/t1/api/v2", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      apiKey: key,
+      campaignName: campaign,
+      destination: phone,
+      userName: name,
+      templateParams: [name, door, `${origin}/r/${id}`],
+    }),
+  })
+    .then(async (r) => {
+      if (!r.ok) console.error("aisensy pack send failed", r.status, await r.text());
+    })
+    .catch((err) => console.error("aisensy pack send error", err));
+}
+
 function sendPackEmail(email: string, pack: Pack, id: string, origin: string) {
   const key = process.env.RESEND_API_KEY;
   if (!key) return;
@@ -97,6 +124,15 @@ export default async function NextMovePage({
           if (!nextMove) throw new Error("no next move");
           pack = await generatePack(session.transcript, nextMove);
           await store.setPack({ id, pack });
+          if (session.phone) {
+            sendPackWhatsApp(
+              session.phone,
+              session.name ?? "there",
+              nextMove.chosenPath.name,
+              id,
+              requestOriginFromHeaders(await headers()),
+            );
+          }
           if (session.email) {
             sendPackEmail(
               session.email,
@@ -128,6 +164,7 @@ export default async function NextMovePage({
       paid={paid}
       pack={pack}
       profile={session.profile}
+      phone={session.phone ?? null}
     />
   );
 }

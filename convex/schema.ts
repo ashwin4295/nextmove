@@ -20,6 +20,7 @@ export default defineSchema({
     contactName: v.optional(v.union(v.string(), v.null())),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
+    phone: v.optional(v.string()),
     payLinkUrl: v.optional(v.string()),
     payLinkId: v.optional(v.string()),
     paid: v.optional(v.boolean()),

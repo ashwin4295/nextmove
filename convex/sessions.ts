@@ -33,6 +33,7 @@ export const create = mutationGeneric({
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     linkedinUrl: v.optional(v.string()),
+    phone: v.optional(v.string()),
     profileStatus: v.optional(profileStatusValidator),
     profile: v.optional(v.union(v.any(), v.null())),
   },
@@ -50,6 +51,7 @@ export const create = mutationGeneric({
       contactName: null,
       ...(args.name ? { name: args.name } : {}),
       ...(args.email ? { email: args.email } : {}),
+      ...(args.phone ? { phone: args.phone } : {}),
       ...(linkedinUrl ? { linkedinUrl } : {}),
       profileStatus:
         args.profileStatus ?? (linkedinUrl ? "pending" : "none"),

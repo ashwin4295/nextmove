@@ -25,6 +25,7 @@ function StartForm({ source, id }: { source: string; id?: string }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [linkedin, setLinkedin] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [capMessage, setCapMessage] = useState("");
@@ -67,6 +68,7 @@ function StartForm({ source, id }: { source: string; id?: string }) {
           name: name.trim(),
           email: trimmedEmail,
           linkedinUrl,
+          phone: phone.trim() || undefined,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -151,6 +153,17 @@ function StartForm({ source, id }: { source: string; id?: string }) {
           placeholder="linkedin.com/in/yourname"
           autoComplete="url"
           inputMode="url"
+          className={inputClass}
+        />
+      </label>
+      <label className="flex flex-col gap-1.5 text-[14px] font-medium text-ink">
+        WhatsApp number <span className="font-normal text-muted">(optional, for the paid pack)</span>
+        <input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="+91 98765 43210"
+          autoComplete="tel"
+          inputMode="tel"
           className={inputClass}
         />
       </label>

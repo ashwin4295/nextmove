@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     name?: string;
     email?: string;
     linkedinUrl?: string;
+    phone?: string;
   };
   const source = typeof body.source === "string" ? body.source : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
@@ -35,7 +36,10 @@ export async function POST(req: Request) {
   if (capsExceeded(caps, "email")) {
     return NextResponse.json({ error: "email_cap" });
   }
-  const id = await store.create({ source, name, email, linkedinUrl });
+  const rawPhone = typeof body.phone === "string" ? body.phone : "";
+  const digits = rawPhone.replace(/[^0-9]/g, "");
+  const phone = digits.length >= 8 && digits.length <= 15 ? (digits.length === 10 ? `91${digits}` : digits) : undefined;
+  const id = await store.create({ source, name, email, linkedinUrl, phone });
   if (capsExceeded(caps, "daily")) {
     return NextResponse.json({ id, error: "daily_cap" });
   }

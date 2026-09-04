@@ -44,6 +44,7 @@ export function NextMoveView({
   paid = false,
   pack = null,
   profile = null,
+  phone = null,
 }: {
   id: string;
   nextMove: PublicNextMove | null;
@@ -54,6 +55,7 @@ export function NextMoveView({
   paid?: boolean;
   pack?: Pack | null;
   profile?: Profile | null;
+  phone?: string | null;
 }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -474,6 +476,20 @@ export function NextMoveView({
                 </Card>
               ))}
             </div>
+            <div className="mt-6">
+              <Button
+                href={`https://wa.me/${phone ?? ""}?text=${encodeURIComponent(
+                  `My NextMove pack\n\n${pack.messages
+                    .map((m) => `To: ${m.to}\n${m.body}`)
+                    .join("\n\n")}\n\nMy two weeks:\n${pack.plan
+                    .map((r) => `${r.day}: ${r.action}`)
+                    .join("\n")}\n\nFull result: ${typeof window !== "undefined" ? window.location.origin : ""}/r/${id}`,
+                )}`}
+                onClick={() => track("pack_whatsapp", { session_id: id })}
+              >
+                Send all of this to my WhatsApp
+              </Button>
+            </div>
             <p className="mt-8 text-lg font-semibold">Your two weeks</p>
             <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-surface">
               <table className="w-full text-sm">
@@ -527,6 +543,11 @@ export function NextMoveView({
                 <li>
                   <span className="font-semibold">A two-week plan</span>: who to
                   message on which day, and what to do if they do not reply.
+                </li>
+                <li>
+                  <span className="font-semibold">On your WhatsApp</span>: the
+                  pack is sent to your number, so it is with you when you need
+                  it, not in a tab you closed.
                 </li>
               </ul>
               <details className="mt-4 rounded-[10px] border border-line p-4">
