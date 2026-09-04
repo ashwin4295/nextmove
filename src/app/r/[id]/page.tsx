@@ -46,6 +46,7 @@ export default async function NextMovePage({
       contactName={session.contactName}
       source={session.source}
       paid={paid}
+      profile={session.profile}
     />
   );
 }

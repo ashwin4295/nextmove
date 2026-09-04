@@ -1,14 +1,19 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { SYSTEM_PROMPT } from "@/lib/script";
+import { asProfile } from "@/lib/profile";
+import { buildSystemPrompt } from "@/lib/script";
 import type { TranscriptTurn } from "@/lib/extract";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const body = (await req.json()) as { transcript?: TranscriptTurn[] };
+  const body = (await req.json()) as {
+    transcript?: TranscriptTurn[];
+    profile?: unknown;
+  };
   const transcript = Array.isArray(body.transcript) ? body.transcript : [];
+  const profile = asProfile(body.profile);
 
   const messages = transcript
     .filter((t) => t.text.trim().length > 0)
@@ -29,7 +34,7 @@ export async function POST(req: Request) {
     model: "claude-sonnet-5",
     max_tokens: 400,
     thinking: { type: "disabled" },
-    system: SYSTEM_PROMPT,
+    system: buildSystemPrompt(profile),
     messages,
   });
 

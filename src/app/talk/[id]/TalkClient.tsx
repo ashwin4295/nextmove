@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { identifyEmail, track } from "@/lib/analytics";
-import { FIRST_MESSAGE, SYSTEM_PROMPT } from "@/lib/script";
+import { asProfile, type Profile, type ProfileStatus } from "@/lib/profile";
+import { buildFirstMessage, buildSystemPrompt } from "@/lib/script";
 import { userTurnCount, type TranscriptTurn } from "@/lib/extract";
 import { Button, StateLabel, Waveform, Wordmark } from "@/lib/ui";
 
@@ -72,10 +73,16 @@ export function TalkClient({
   id,
   email,
   source,
+  linkedinUrl,
+  profileStatus: initialStatus,
+  profile: initialProfile,
 }: {
   id: string;
   email: string | null;
   source: string;
+  linkedinUrl: string | null;
+  profileStatus: ProfileStatus;
+  profile: Profile | null;
 }) {
   const router = useRouter();
 
@@ -97,6 +104,19 @@ export function TalkClient({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [tooShort, setTooShort] = useState("");
+  const [profileChip, setProfileChip] = useState<
+    "pending" | "ready" | "failed" | null
+  >(
+    linkedinUrl
+      ? initialStatus === "ready"
+        ? "ready"
+        : initialStatus === "failed"
+          ? "failed"
+          : "pending"
+      : null,
+  );
+  const profileRef = useRef<Profile | null>(initialProfile);
+  const chipFiredRef = useRef(false);
 
   useEffect(() => {
     transcriptRef.current = transcript;
@@ -117,6 +137,69 @@ export function TalkClient({
       vapiRef.current?.stop().catch(() => undefined);
     };
   }, []);
+
+  useEffect(() => {
+    if (!linkedinUrl || !profileChip) return;
+
+    function resolve(status: "ready" | "failed", next?: Profile | null) {
+      if (chipFiredRef.current) return;
+      chipFiredRef.current = true;
+      if (status === "ready") {
+        if (next) profileRef.current = next;
+        setProfileChip("ready");
+        track("profile_ready", { session_id: id, source });
+      } else {
+        setProfileChip("failed");
+        track("profile_failed", { session_id: id, source });
+      }
+    }
+
+    if (profileChip === "ready") {
+      resolve("ready", profileRef.current);
+      return;
+    }
+    if (profileChip === "failed") {
+      resolve("failed");
+      return;
+    }
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const started = Date.now();
+
+    async function poll() {
+      if (cancelled) return;
+      try {
+        const res = await fetch(`/api/session/${id}`);
+        const data = (await res.json()) as {
+          status?: ProfileStatus;
+          profile?: unknown;
+        };
+        if (cancelled) return;
+        if (data.status === "ready") {
+          resolve("ready", asProfile(data.profile));
+          return;
+        }
+        if (data.status === "failed") {
+          resolve("failed");
+          return;
+        }
+      } catch {
+        // keep polling until the window closes
+      }
+      if (Date.now() - started >= 20_000) {
+        resolve("failed");
+        return;
+      }
+      timer = setTimeout(poll, 2000);
+    }
+
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [id, linkedinUrl, profileChip, source]);
 
   function setActFrom(text: string) {
     setAct((current) => {
@@ -189,7 +272,12 @@ export function TalkClient({
         model: budget
           ? ("claude-haiku-4-5-20251001" as const)
           : ("claude-sonnet-4-6" as const),
-        messages: [{ role: "system" as const, content: SYSTEM_PROMPT }],
+        messages: [
+          {
+            role: "system" as const,
+            content: buildSystemPrompt(profileRef.current),
+          },
+        ],
       },
       // Aura-2 by default: ElevenLabs via Vapi failed with
       // pipeline-error-eleven-labs-voice-failed (account credential).
@@ -207,7 +295,7 @@ export function TalkClient({
         model: "nova-2",
         language: "en" as const,
       },
-      firstMessage: FIRST_MESSAGE,
+      firstMessage: buildFirstMessage(profileRef.current),
       silenceTimeoutSeconds: 90,
       maxDurationSeconds: 780,
       backgroundSound: "off" as const,
@@ -297,7 +385,7 @@ export function TalkClient({
     setTranscript((prev) => {
       if (prev.length === 0) {
         const seeded: TranscriptTurn[] = [
-          { role: "assistant", text: FIRST_MESSAGE },
+          { role: "assistant", text: buildFirstMessage(profileRef.current) },
         ];
         transcriptRef.current = seeded;
         return seeded;
@@ -321,7 +409,10 @@ export function TalkClient({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: next }),
+        body: JSON.stringify({
+          transcript: next,
+          profile: profileRef.current,
+        }),
       });
       const data = (await res.json()) as { text?: string };
       if (data.text) {
@@ -405,6 +496,15 @@ export function TalkClient({
       {state === "ready" ? (
         <div>
           <h2>Let&apos;s get ready to talk.</h2>
+          {profileChip ? (
+            <p className="mt-3 inline-flex rounded-full bg-sage px-2.5 py-1 text-[13px] text-muted">
+              {profileChip === "ready"
+                ? "Profile read."
+                : profileChip === "failed"
+                  ? "Couldn't read the profile, no problem."
+                  : "Reading your profile…"}
+            </p>
+          ) : null}
           <div className="mt-6">
             <HairlineRow>
               About ten minutes, in three short parts. Stop any time.

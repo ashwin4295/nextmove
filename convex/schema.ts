@@ -23,5 +23,15 @@ export default defineSchema({
     payLinkUrl: v.optional(v.string()),
     payLinkId: v.optional(v.string()),
     paid: v.optional(v.boolean()),
+    linkedinUrl: v.optional(v.string()),
+    profileStatus: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("ready"),
+        v.literal("failed"),
+        v.literal("none"),
+      ),
+    ),
+    profile: v.optional(v.union(v.any(), v.null())),
   }).index("by_createdAt", ["createdAt"]),
 });

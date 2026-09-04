@@ -87,9 +87,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    const nextMove = await extractNextMove(transcript);
-    const actReached = Math.max(clientAct ?? 0, nextMove.actReached) as 1 | 2 | 3;
     const existing = await store.get({ id }).catch(() => null);
+    const nextMove = await extractNextMove(transcript, existing?.profile);
+    const actReached = Math.max(clientAct ?? 0, nextMove.actReached) as 1 | 2 | 3;
     await store.finish({
       id,
       transcript,

@@ -2,6 +2,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { anyApi } from "convex/server";
 import type { NextMove, TranscriptTurn } from "./extract";
 import { normalizeNextMove } from "./extract";
+import { asProfile, type Profile, type ProfileStatus } from "./profile";
 
 export type SessionDoc = {
   _id: string;
@@ -19,6 +20,9 @@ export type SessionDoc = {
   payLinkUrl: string | null;
   payLinkId: string | null;
   paid: boolean;
+  linkedinUrl: string | null;
+  profileStatus: ProfileStatus;
+  profile: Profile | null;
 };
 
 export type Stats = {
@@ -43,6 +47,7 @@ export type RecentRow = {
   paid: boolean;
   shares: number;
   email: string | null;
+  profileStatus: ProfileStatus;
 };
 
 export type SessionStore = {
@@ -50,7 +55,13 @@ export type SessionStore = {
     source: string;
     name?: string;
     email?: string;
+    linkedinUrl?: string;
   }) => Promise<string>;
+  setProfile: (args: {
+    id: string;
+    status: ProfileStatus;
+    profile: Profile | null;
+  }) => Promise<void>;
   finish: (args: {
     id: string;
     transcript: TranscriptTurn[];
@@ -111,6 +122,9 @@ type SessionExtras = {
   payLinkUrl?: string | null;
   payLinkId?: string | null;
   paid?: boolean;
+  linkedinUrl?: string | null;
+  profileStatus?: ProfileStatus;
+  profile?: Profile | null;
 };
 
 function extrasMap(): Map<string, SessionExtras> {
@@ -154,6 +168,9 @@ function hydrate(row: {
   payLinkUrl?: string | null;
   payLinkId?: string | null;
   paid?: boolean;
+  linkedinUrl?: string | null;
+  profileStatus?: ProfileStatus;
+  profile?: unknown;
 }): SessionDoc {
   const nextMove = normalizeNextMove(row.roadmap);
   const blob =
@@ -190,6 +207,26 @@ function hydrate(row: {
     null;
   const paid =
     row.paid === true || blob?.__paid === true || extras?.paid === true;
+  const linkedinUrl =
+    row.linkedinUrl ??
+    (typeof blob?.__linkedinUrl === "string" ? blob.__linkedinUrl : null) ??
+    extras?.linkedinUrl ??
+    null;
+  const profileStatus: ProfileStatus =
+    row.profileStatus ??
+    (blob?.__profileStatus === "pending" ||
+    blob?.__profileStatus === "ready" ||
+    blob?.__profileStatus === "failed" ||
+    blob?.__profileStatus === "none"
+      ? blob.__profileStatus
+      : null) ??
+    extras?.profileStatus ??
+    (linkedinUrl ? "pending" : "none");
+  const profile =
+    asProfile(row.profile) ??
+    asProfile(blob?.__profile) ??
+    extras?.profile ??
+    null;
   return {
     _id: String(row._id),
     createdAt: row.createdAt,
@@ -206,12 +243,16 @@ function hydrate(row: {
     payLinkUrl,
     payLinkId,
     paid,
+    linkedinUrl,
+    profileStatus,
+    profile,
   };
 }
 
 const memoryStore: SessionStore = {
-  async create({ source, name, email }) {
+  async create({ source, name, email, linkedinUrl }) {
     const id = `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const url = linkedinUrl?.trim() || null;
     getMemoryMap().set(id, {
       _id: id,
       createdAt: Date.now(),
@@ -228,8 +269,17 @@ const memoryStore: SessionStore = {
       payLinkUrl: null,
       payLinkId: null,
       paid: false,
+      linkedinUrl: url,
+      profileStatus: url ? "pending" : "none",
+      profile: null,
     });
     return id;
+  },
+  async setProfile({ id, status, profile }) {
+    const row = getMemoryMap().get(id);
+    if (!row) return;
+    row.profileStatus = status;
+    row.profile = profile;
   },
   async finish({ id, transcript, roadmap, actReached }) {
     const row = getMemoryMap().get(id);
@@ -302,6 +352,7 @@ const memoryStore: SessionStore = {
         paid: r.paid,
         shares: r.shares,
         email: r.email,
+        profileStatus: r.profileStatus,
       }));
   },
   async countUnique() {
@@ -339,10 +390,26 @@ function convexStore(url: string): SessionStore {
   }
 
   return {
-    async create({ source, name, email }) {
-      const extras = {
+    async create({ source, name, email, linkedinUrl }) {
+      const extras: SessionExtras = {
         name: name?.trim() || null,
         email: email?.trim() || null,
+        linkedinUrl: linkedinUrl?.trim() || null,
+        profileStatus: linkedinUrl?.trim() ? "pending" : "none",
+        profile: null,
+      };
+      const persistLink = async (id: string) => {
+        rememberId(id);
+        rememberExtras(id, extras);
+        if (!extras.linkedinUrl) return;
+        try {
+          await finishViaExisting(id, [], {
+            __linkedinUrl: extras.linkedinUrl,
+            __profileStatus: extras.profileStatus,
+          });
+        } catch {
+          // extras still in memory for this process
+        }
       };
       try {
         const id = String(
@@ -350,18 +417,59 @@ function convexStore(url: string): SessionStore {
             source,
             ...(extras.name ? { name: extras.name } : {}),
             ...(extras.email ? { email: extras.email } : {}),
+            ...(extras.linkedinUrl
+              ? {
+                  linkedinUrl: extras.linkedinUrl,
+                  profileStatus: extras.profileStatus,
+                }
+              : {}),
           }),
         );
         rememberId(id);
         rememberExtras(id, extras);
         return id;
       } catch {
-        const id = String(
-          await client().mutation(anyApi.sessions.create, { source }),
-        );
-        rememberId(id);
-        rememberExtras(id, extras);
-        return id;
+        try {
+          const id = String(
+            await client().mutation(anyApi.sessions.create, {
+              source,
+              ...(extras.name ? { name: extras.name } : {}),
+              ...(extras.email ? { email: extras.email } : {}),
+            }),
+          );
+          await persistLink(id);
+          return id;
+        } catch {
+          const id = String(
+            await client().mutation(anyApi.sessions.create, { source }),
+          );
+          await persistLink(id);
+          return id;
+        }
+      }
+    },
+    async setProfile({ id, status, profile }) {
+      rememberExtras(id, { profileStatus: status, profile });
+      try {
+        await client().mutation(anyApi.sessions.setProfile, {
+          id,
+          status,
+          profile,
+        });
+      } catch {
+        const row = await client().query(anyApi.sessions.get, { id });
+        if (!row) return;
+        const prev =
+          row.roadmap && typeof row.roadmap === "object" ? row.roadmap : {};
+        const extras = extrasMap().get(id);
+        await finishViaExisting(id, row.transcript ?? [], {
+          ...prev,
+          __profileStatus: status,
+          __profile: profile,
+          ...(extras?.linkedinUrl
+            ? { __linkedinUrl: extras.linkedinUrl }
+            : {}),
+        });
       }
     },
     async finish({ id, transcript, roadmap, actReached }) {
@@ -376,13 +484,23 @@ function convexStore(url: string): SessionStore {
                 | 3,
             }
           : roadmap;
-      const withMeta =
-        merged && extras
-          ? {
-              ...merged,
-              ...(extras.email ? { __email: extras.email } : {}),
-              ...(extras.name ? { __name: extras.name } : {}),
-            }
+      const meta = extras
+        ? {
+            ...(extras.email ? { __email: extras.email } : {}),
+            ...(extras.name ? { __name: extras.name } : {}),
+            ...(extras.linkedinUrl
+              ? { __linkedinUrl: extras.linkedinUrl }
+              : {}),
+            ...(extras.profileStatus
+              ? { __profileStatus: extras.profileStatus }
+              : {}),
+            ...(extras.profile ? { __profile: extras.profile } : {}),
+          }
+        : {};
+      const withMeta = merged
+        ? { ...merged, ...meta }
+        : Object.keys(meta).length
+          ? meta
           : merged;
       // Do not send extra args: production Convex still has the M-A finish signature
       // until the operator deploys. actReached is baked into the stored object.
@@ -504,12 +622,16 @@ function convexStore(url: string): SessionStore {
         const rows = (await client().query(anyApi.sessions.listRecent, {
           limit,
         })) as RecentRow[];
-        return rows.map((r) => ({
-          ...r,
-          _id: String(r._id),
-          email: r.email ?? extrasMap().get(String(r._id))?.email ?? null,
-          paid: r.paid === true || extrasMap().get(String(r._id))?.paid === true,
-        }));
+        return rows.map((r) => {
+          const extra = extrasMap().get(String(r._id));
+          return {
+            ...r,
+            _id: String(r._id),
+            email: r.email ?? extra?.email ?? null,
+            paid: r.paid === true || extra?.paid === true,
+            profileStatus: r.profileStatus ?? extra?.profileStatus ?? "none",
+          };
+        });
       } catch {
         const ids = recentIdList().slice(0, Math.min(Math.max(limit, 1), 25));
         const rows = await Promise.all(
@@ -529,6 +651,7 @@ function convexStore(url: string): SessionStore {
             paid: r.paid,
             shares: r.shares,
             email: r.email,
+            profileStatus: r.profileStatus,
           }));
       }
     },

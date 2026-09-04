@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { track } from "@/lib/analytics";
 import type { NextMove, TranscriptTurn } from "@/lib/extract";
+import type { Profile } from "@/lib/profile";
 import {
   Badge,
   Button,
@@ -41,6 +42,7 @@ export function NextMoveView({
   contactName: initialContactName,
   source,
   paid = false,
+  profile = null,
 }: {
   id: string;
   nextMove: PublicNextMove | null;
@@ -49,6 +51,7 @@ export function NextMoveView({
   contactName: string | null;
   source: string;
   paid?: boolean;
+  profile?: Profile | null;
 }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -285,6 +288,14 @@ export function NextMoveView({
 
         <Card className="mt-10 p-6">
           <p className="text-lg font-semibold">What we heard</p>
+          {profile ? (
+            <p className="mt-2 text-[15px] text-muted">
+              From your profile: {profile.headline}
+              {profile.yearsExperience != null
+                ? ` · ${profile.yearsExperience} years`
+                : ""}
+            </p>
+          ) : null}
           <div className="mt-5 grid gap-6 sm:grid-cols-2">
             <div>
               <p className="text-[15px] font-semibold">Moving away from</p>

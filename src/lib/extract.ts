@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { formatProfileFields, type Profile } from "./profile";
 
 export type TranscriptTurn = { role: "assistant" | "user"; text: string };
 export type Realism = "strong fit" | "realistic" | "a stretch" | "long shot";
@@ -211,16 +212,19 @@ async function claudeText(system: string, user: string, maxTokens: number) {
 
 export async function extractNextMove(
   transcript: TranscriptTurn[],
+  profile?: Profile | null,
 ): Promise<NextMove> {
   const body = transcript
     .map((t) => `${t.role === "assistant" ? "Coach" : "User"}: ${t.text}`)
     .join("\n");
+  const user = profile
+    ? `${body || "(empty transcript)"}\n\nPROFILE CONTEXT\n${formatProfileFields(profile)}`
+    : body || "(empty transcript)";
+  const system = profile
+    ? `${EXTRACT_PROMPT}\n\nProfile informs realism and specificity; the transcript wins on intent and constraints.`
+    : EXTRACT_PROMPT;
 
-  const text = await claudeText(
-    EXTRACT_PROMPT,
-    body || "(empty transcript)",
-    2500,
-  );
+  const text = await claudeText(system, user, 2500);
 
   try {
     const parsed = normalizeNextMove(extractJson(text));

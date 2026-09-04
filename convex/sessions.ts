@@ -20,13 +20,24 @@ function extractedAct(roadmap: unknown): number | null {
   return null;
 }
 
+const profileStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("ready"),
+  v.literal("failed"),
+  v.literal("none"),
+);
+
 export const create = mutationGeneric({
   args: {
     source: v.string(),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
+    linkedinUrl: v.optional(v.string()),
+    profileStatus: v.optional(profileStatusValidator),
+    profile: v.optional(v.union(v.any(), v.null())),
   },
   handler: async (ctx, args) => {
+    const linkedinUrl = args.linkedinUrl || undefined;
     return await ctx.db.insert("sessions", {
       createdAt: Date.now(),
       source: args.source,
@@ -39,6 +50,26 @@ export const create = mutationGeneric({
       contactName: null,
       ...(args.name ? { name: args.name } : {}),
       ...(args.email ? { email: args.email } : {}),
+      ...(linkedinUrl ? { linkedinUrl } : {}),
+      profileStatus:
+        args.profileStatus ?? (linkedinUrl ? "pending" : "none"),
+      profile: args.profile ?? null,
+    });
+  },
+});
+
+export const setProfile = mutationGeneric({
+  args: {
+    id: v.id("sessions"),
+    status: profileStatusValidator,
+    profile: v.union(v.any(), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.id);
+    if (!row) return;
+    await ctx.db.patch(args.id, {
+      profileStatus: args.status,
+      profile: args.profile,
     });
   },
 });
@@ -132,6 +163,9 @@ export const get = queryGeneric({
       payLinkUrl: row.payLinkUrl ?? null,
       payLinkId: row.payLinkId ?? null,
       paid: row.paid ?? false,
+      linkedinUrl: row.linkedinUrl ?? null,
+      profileStatus: row.profileStatus ?? "none",
+      profile: row.profile ?? null,
     };
   },
 });
@@ -197,6 +231,7 @@ export const listRecent = queryGeneric({
       paid: r.paid ?? false,
       shares: r.shares ?? 0,
       email: r.email ?? null,
+      profileStatus: r.profileStatus ?? "none",
     }));
   },
 });

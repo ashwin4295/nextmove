@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { rememberSource } from "@/lib/analytics";
+import { rememberSource, track } from "@/lib/analytics";
+import { normalizeLinkedInUrl } from "@/lib/profile";
 import {
   Badge,
   Button,
@@ -23,6 +24,7 @@ function StartForm({ source, id }: { source: string; id?: string }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [linkedin, setLinkedin] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -41,6 +43,16 @@ function StartForm({ source, id }: { source: string; id?: string }) {
       setError("Enter a valid email.");
       return;
     }
+    const trimmedLinkedin = linkedin.trim();
+    let linkedinUrl: string | undefined;
+    if (trimmedLinkedin) {
+      const normalised = normalizeLinkedInUrl(trimmedLinkedin);
+      if (!normalised) {
+        setError("That doesn't look like a LinkedIn profile link.");
+        return;
+      }
+      linkedinUrl = normalised;
+    }
     setBusy(true);
     setError("");
     try {
@@ -51,19 +63,34 @@ function StartForm({ source, id }: { source: string; id?: string }) {
           source,
           name: name.trim(),
           email: trimmedEmail,
+          ...(linkedinUrl ? { linkedinUrl } : {}),
         }),
       });
       if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
         setError(
-          res.status === 400
-            ? "Enter a valid email."
-            : "Could not start. Try again.",
+          data.error === "invalid linkedin"
+            ? "That doesn't look like a LinkedIn profile link."
+            : res.status === 400
+              ? "Enter a valid email."
+              : "Could not start. Try again.",
         );
         setBusy(false);
         return;
       }
       const data = (await res.json()) as { id?: string };
       if (!data.id) throw new Error("no id");
+      void fetch("/api/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: data.id }),
+        keepalive: true,
+      });
+      if (linkedinUrl) {
+        track("profile_submitted", { session_id: data.id, source });
+      }
       router.push(`/talk/${data.id}`);
     } catch {
       setError("Could not start. Try again.");
@@ -92,6 +119,14 @@ function StartForm({ source, id }: { source: string; id?: string }) {
           className={inputClass}
         />
       </div>
+      <input
+        value={linkedin}
+        onChange={(e) => setLinkedin(e.target.value)}
+        placeholder="linkedin.com/in/yourname (optional)"
+        autoComplete="url"
+        inputMode="url"
+        className={inputClass}
+      />
       <Button type="submit" disabled={busy} className="w-full sm:w-auto">
         {busy ? "Starting…" : "Start a conversation"}
       </Button>
@@ -632,6 +667,10 @@ export function Landing({ source }: { source: string }) {
             </div>
             <p className="mt-4 text-[15px] text-muted">
               About ten minutes · Voice or text · Free till Sep 8 2026
+            </p>
+            <p className="mt-1 text-[15px] text-muted">
+              If you add your LinkedIn, the coach reads the public profile and
+              skips the basics. We never post, connect, or message anyone.
             </p>
           </div>
           <div className="min-w-0 md:col-span-7">

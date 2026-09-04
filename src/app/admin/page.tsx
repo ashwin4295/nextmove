@@ -70,6 +70,7 @@ export default async function AdminPage({
                 <th className="px-4 py-3 font-medium">createdAt</th>
                 <th className="px-4 py-3 font-medium">source</th>
                 <th className="px-4 py-3 font-medium">email</th>
+                <th className="px-4 py-3 font-medium">profile</th>
                 <th className="px-4 py-3 font-medium">actReached</th>
                 <th className="px-4 py-3 font-medium">sent</th>
                 <th className="px-4 py-3 font-medium">paid</th>
@@ -83,6 +84,7 @@ export default async function AdminPage({
                   <td className="px-4 py-3">{formatWhen(row.createdAt)}</td>
                   <td className="px-4 py-3">{row.source || "-"}</td>
                   <td className="px-4 py-3">{row.email || "-"}</td>
+                  <td className="px-4 py-3">{row.profileStatus ?? "none"}</td>
                   <td className="px-4 py-3">{row.actReached ?? "-"}</td>
                   <td className="px-4 py-3">{row.sent ? "yes" : "no"}</td>
                   <td className="px-4 py-3">{row.paid ? "yes" : "no"}</td>
@@ -96,7 +98,7 @@ export default async function AdminPage({
               ))}
               {recent.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={8}>
+                  <td className="px-4 py-6 text-muted" colSpan={9}>
                     No sessions yet.
                   </td>
                 </tr>

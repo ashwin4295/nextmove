@@ -1,5 +1,31 @@
+import { formatProfileFields, type Profile } from "./profile";
+
 export const FIRST_MESSAGE =
   "Hey, I'm your NextMove coach. Quick thing before we start: this isn't a form, it's just a conversation, about ten minutes. A few of my questions will be a bit direct. That's on purpose. So, tell me what you do these days. Not the LinkedIn version. The version you'd give a friend over coffee.";
+
+export function buildSystemPrompt(profile: Profile | null): string {
+  if (!profile) return SYSTEM_PROMPT;
+  return `WHAT YOU ALREADY KNOW (from their public LinkedIn; they gave you this):
+${formatProfileFields(profile)}
+Rules: use this to skip the basics and to make doors and the first message specific. Never read it back to them as a list. Never contradict what they say in the conversation with what the profile says; if they differ, believe the person and note the gap in one short question. Never mention "the scrape" or "the data".
+
+${SYSTEM_PROMPT}`;
+}
+
+export function buildFirstMessage(profile: Profile | null): string {
+  if (!profile) return FIRST_MESSAGE;
+  const intro =
+    "Hey, I'm your NextMove coach. Quick thing before we start: this isn't a form, it's just a conversation, about ten minutes. I've had a look at your profile, so I'll skip the basics.";
+  let role = "";
+  if (profile.currentRole) {
+    role = ` ${profile.currentRole.title} at ${profile.currentRole.company}`;
+    if (profile.yearsExperience != null) {
+      role += `, ${profile.yearsExperience} years in`;
+    }
+    role += ".";
+  }
+  return `${intro}${role} So tell me, what does that description miss? What's the version you'd give a friend over coffee?`;
+}
 
 export const SYSTEM_PROMPT = `You are a career coach who has sat through a thousand of these conversations. You talk like a person, not a product.
 
