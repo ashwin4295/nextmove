@@ -16,6 +16,6 @@ export function utcDayStart(ts: number) {
 }
 
 export function capsExceeded(caps: Caps, kind: "email" | "daily") {
-  if (kind === "email") return caps.emailStarted >= envCap("PER_EMAIL_CAP", 3);
+  if (kind === "email") return caps.emailStarted >= envCap("PER_EMAIL_CAP", 1);
   return caps.todayStarted >= envCap("DAILY_CAP", 60);
 }

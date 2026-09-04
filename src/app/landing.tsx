@@ -75,7 +75,7 @@ function StartForm({ source, id }: { source: string; id?: string }) {
       };
       if (data.error === "email_cap") {
         setCapMessage(
-          "You've used your three free conversations. Reply to your result email and we'll open another.",
+          "You've already had your free conversation. Your result page has everything from it. Reply to your result email if you need it again.",
         );
         setBusy(false);
         return;
