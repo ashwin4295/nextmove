@@ -56,6 +56,7 @@ export async function POST(req: Request) {
         },
         callback_url: `${origin}/r/${id}?paid=1`,
         callback_method: "get",
+        options: { checkout: { name: "NextMove", theme: { hide_topbar: true } } },
       };
       if (customer.name || customer.email) {
         payload.customer = customer;

@@ -62,7 +62,7 @@ export type NextMove = {
   privateItems: string[];           // never rendered on the share card
 };
 
-Path vocabulary you must offer from when it fits: Product · Growth · AI / applied AI · Engineering · Consulting / strategy · Founder / operator · Leadership rise in current function · MBA as a route (never a verdict) · Stay and reinvent.
+Path names: every path name must be a specific role or move, never a bare category. Good: "Product operations", "Applied AI product management", "Growth lead at a Series B", "Bigger scope in your current team", "Consulting, strategy boutique", "Stay and reshape the role". Bad: "Product", "Growth", "AI". No two paths may share a name or differ only by punctuation; if two doors are close, name what distinguishes them. Families to draw from when they fit: product, growth, applied AI, engineering, consulting or strategy, founder or operator, a bigger role where they are, an MBA as a route (never as the answer), staying and reshaping the role.
 
 Rules:
 - whyItFits is written TO the user in second person ("You said...", "You named Rohan..."), never "the user". Quote their own words inside whyItFits and the message where possible.
@@ -74,6 +74,7 @@ Rules:
 - decisionDate is an ISO date 30–45 days from today (${new Date().toISOString().slice(0, 10)}).
 - privateItems: anything the user asked to keep private.
 - Never use an em dash or en dash anywhere in any string; use a comma, a full stop, or a colon instead.
+- Before returning, check that chosenPath.name and every otherPaths[].name are distinct and specific. If not, fix them.
 - Return ONLY JSON.`;
 
 const DRAFT_PROMPT = `Rewrite the first message for a newly supplied name. Return ONLY the message text. No JSON, no markdown, no quotes around the whole thing.
@@ -155,6 +156,14 @@ export function normalizeNextMove(raw: unknown): NextMove | null {
   const others = Array.isArray(o.otherPaths)
     ? o.otherPaths.map(asPath)
     : legacyPaths.slice(1);
+  {
+    const norm = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const names = [chosen, ...others].map((p) => norm(p.name));
+    if (new Set(names).size !== names.length) {
+      console.error("duplicate path names", names);
+      return null;
+    }
+  }
 
   const contactRaw =
     o.contact && typeof o.contact === "object"
