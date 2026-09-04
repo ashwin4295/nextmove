@@ -9,7 +9,7 @@ export default function TermsPage() {
       </LegalSection>
       <LegalSection title="Free and paid">
         The conversation is free until 6 September 2026. The Next Move Pack
-        costs ₹299, paid through Razorpay. Because the pack is generated for you
+        costs ₹299 at launch and ₹999 at full price, paid through Razorpay. Because the pack is generated for you
         within minutes, it is not refundable once delivered. If it does not
         arrive within 24 hours, email nextmove@mbbprep.com and we refund or
         resend.
