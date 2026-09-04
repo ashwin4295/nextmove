@@ -611,7 +611,7 @@ const FAQ = [
   },
   {
     q: "What does it cost?",
-    a: "Try for free till September 6. A paid pack with more drafted messages is ₹299 at launch, ₹999 after.",
+    a: "Try for free till September 6. A paid pack with more drafted messages is ₹299 till September 6, then ₹999.",
   },
   {
     q: "What happens to my conversation?",

@@ -569,7 +569,7 @@ export function NextMoveView({
                 </p>
               </details>
               <p className="mt-4 text-[15px] font-medium">
-                ₹299 for now, full price ₹999. Ready within a minute of
+                ₹299 till September 6, then ₹999. Ready within a minute of
                 paying.
               </p>
               <div className="mt-5">
