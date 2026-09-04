@@ -17,6 +17,33 @@ function requestOrigin(req: Request) {
   return "https://nextmove.thedirectorloop.com";
 }
 
+function sendResultWhatsApp(
+  phone: string,
+  name: string,
+  doorAndGrade: string,
+  id: string,
+  origin: string,
+) {
+  const key = process.env.AISENSY_API_KEY;
+  const campaign = process.env.AISENSY_RESULT_CAMPAIGN;
+  if (!key || !campaign) return;
+  fetch("https://backend.aisensy.com/campaign/t1/api/v2", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      apiKey: key,
+      campaignName: campaign,
+      destination: phone,
+      userName: name,
+      templateParams: [name, doorAndGrade, `${origin}/r/${id}`],
+    }),
+  })
+    .then(async (r) => {
+      if (!r.ok) console.error("aisensy result send failed", r.status, await r.text());
+    })
+    .catch((err) => console.error("aisensy result send error", err));
+}
+
 function sendNextMoveEmail(
   email: string,
   nextMove: NextMove,
@@ -100,6 +127,16 @@ export async function POST(req: Request) {
     const email = existing?.email;
     if (process.env.RESEND_API_KEY && email) {
       sendNextMoveEmail(email, nextMove, id, requestOrigin(req));
+    }
+    const phone = existing?.phone;
+    if (phone) {
+      sendResultWhatsApp(
+        phone,
+        existing?.name ?? "there",
+        `${nextMove.chosenPath.name}, ${nextMove.chosenPath.realism}`,
+        id,
+        requestOrigin(req),
+      );
     }
     return NextResponse.json({ id });
   } catch (err) {
