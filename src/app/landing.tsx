@@ -27,6 +27,7 @@ function StartForm({ source, id }: { source: string; id?: string }) {
   const [linkedin, setLinkedin] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [capMessage, setCapMessage] = useState("");
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -55,6 +56,7 @@ function StartForm({ source, id }: { source: string; id?: string }) {
     }
     setBusy(true);
     setError("");
+    setCapMessage("");
     try {
       const res = await fetch("/api/session", {
         method: "POST",
@@ -66,10 +68,25 @@ function StartForm({ source, id }: { source: string; id?: string }) {
           ...(linkedinUrl ? { linkedinUrl } : {}),
         }),
       });
+      const data = (await res.json().catch(() => ({}))) as {
+        id?: string;
+        error?: string;
+      };
+      if (data.error === "email_cap") {
+        setCapMessage(
+          "You've used your three free conversations. Reply to your result email and we'll open another.",
+        );
+        setBusy(false);
+        return;
+      }
+      if (data.error === "daily_cap") {
+        setCapMessage(
+          "We're full for today. Your spot is saved and we'll email you when it opens tomorrow.",
+        );
+        setBusy(false);
+        return;
+      }
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as {
-          error?: string;
-        };
         setError(
           data.error === "invalid linkedin"
             ? "That doesn't look like a LinkedIn profile link."
@@ -80,7 +97,6 @@ function StartForm({ source, id }: { source: string; id?: string }) {
         setBusy(false);
         return;
       }
-      const data = (await res.json()) as { id?: string };
       if (!data.id) throw new Error("no id");
       void fetch("/api/enrich", {
         method: "POST",
@@ -130,6 +146,9 @@ function StartForm({ source, id }: { source: string; id?: string }) {
       <Button type="submit" disabled={busy} className="w-full sm:w-auto">
         {busy ? "Starting…" : "Start a conversation"}
       </Button>
+      {capMessage ? (
+        <p className="text-[15px] leading-relaxed text-ink">{capMessage}</p>
+      ) : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
     </form>
   );
@@ -568,7 +587,7 @@ const FAQ = [
   },
   {
     q: "What does it cost?",
-    a: "Free till Sep 8 2026. A paid pack with more drafted messages is coming.",
+    a: "Try for free till September 6. A paid pack with more drafted messages is ₹99.",
   },
   {
     q: "What happens to my conversation?",
@@ -666,7 +685,7 @@ export function Landing({ source }: { source: string }) {
               <StartForm source={source} />
             </div>
             <p className="mt-4 text-[15px] text-muted">
-              About ten minutes · Voice or text · Free till Sep 8 2026
+              About ten minutes · Voice or text · Try for free till September 6
             </p>
             <p className="mt-1 text-[15px] text-muted">
               If you add your LinkedIn, the coach reads the public profile and
@@ -772,8 +791,11 @@ export function Landing({ source }: { source: string }) {
         <Container className="flex flex-col gap-4 text-[15px] text-muted md:flex-row md:items-center md:justify-between">
           <Wordmark />
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <a href="#trust" className="hover:text-ink hover:underline">
+            <a href="/privacy" className="hover:text-ink hover:underline">
               Privacy
+            </a>
+            <a href="/terms" className="hover:text-ink hover:underline">
+              Terms
             </a>
             <a
               href="https://github.com/ashwin4295/nextmove"
@@ -781,14 +803,7 @@ export function Landing({ source }: { source: string }) {
             >
               GitHub
             </a>
-            <a
-              href="https://calendly.com/mbbprepofficial/15min?utm_source=nextmove"
-              className="hover:text-ink hover:underline"
-            >
-              Talk to Ashwin
-            </a>
           </div>
-          <p>Built during GrowthX Build Week, September 2026</p>
         </Container>
       </footer>
     </div>

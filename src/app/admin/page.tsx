@@ -1,4 +1,6 @@
+import { unauthorized } from "next/navigation";
 import { store } from "@/lib/convexClient";
+import type { RecentRow } from "@/lib/convexClient";
 import { Container, Eyebrow, Wordmark } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,13 @@ function formatWhen(ts: number) {
   });
 }
 
+function paidLabel(row: RecentRow) {
+  if (!row.paid) return "no";
+  if (row.hasPack) return "paid+pack";
+  if (row.packFailed) return "paid, pack failed";
+  return "paid";
+}
+
 export default async function AdminPage({
   searchParams,
 }: {
@@ -20,11 +29,7 @@ export default async function AdminPage({
   const adminKey = process.env.ADMIN_KEY;
   const { key } = await searchParams;
   if (adminKey && key !== adminKey) {
-    return (
-      <main className="p-6">
-        <p>Unauthorized.</p>
-      </main>
-    );
+    unauthorized();
   }
 
   const [stats, recent, uniqueSignups] = await Promise.all([
@@ -87,7 +92,7 @@ export default async function AdminPage({
                   <td className="px-4 py-3">{row.profileStatus ?? "none"}</td>
                   <td className="px-4 py-3">{row.actReached ?? "-"}</td>
                   <td className="px-4 py-3">{row.sent ? "yes" : "no"}</td>
-                  <td className="px-4 py-3">{row.paid ? "yes" : "no"}</td>
+                  <td className="px-4 py-3">{paidLabel(row)}</td>
                   <td className="px-4 py-3">{row.shares}</td>
                   <td className="px-4 py-3">
                     <a href={`/r/${row._id}`} className="text-forest underline">

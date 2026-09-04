@@ -29,6 +29,12 @@ export type NextMove = {
   actReached: 1 | 2 | 3;
   privateItems: string[];
 };
+export type PackMessage = { to: string; body: string };
+export type PackPlanRow = { day: string; action: string };
+export type Pack = {
+  messages: PackMessage[];
+  plan: PackPlanRow[];
+};
 
 const REALISM: Realism[] = [
   "strong fit",
@@ -210,6 +216,49 @@ async function claudeText(system: string, user: string, maxTokens: number) {
     .join("");
 }
 
+const PACK_PROMPT = `Return ONLY JSON matching this TypeScript type. No prose, no markdown.
+
+export type Pack = {
+  messages: [
+    { to: "A hiring manager in that world", body: string },
+    { to: "A mentor you admire", body: string },
+    { to: "Your current manager, the internal version", body: string }
+  ];
+  plan: { day: string; action: string }[];
+};
+
+Rules:
+- First person, the user's own phrasing.
+- 70 to 120 words per message.
+- No flattery, no exclamation marks, no dashes.
+- Each message ends with an easy no.
+- plan has up to 6 rows across two weeks. day looks like "Day 1 to 3" or "Day 4 to 7".
+- Never use an em dash or en dash anywhere in any string; use a comma, a full stop, or a colon instead.
+- Return ONLY JSON.`;
+
+export function asPack(raw: unknown): Pack | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (!Array.isArray(o.messages) || !Array.isArray(o.plan)) return null;
+  const messages = o.messages
+    .filter((m): m is Record<string, unknown> => !!m && typeof m === "object")
+    .map((m) => ({
+      to: asString(m.to),
+      body: asString(m.body),
+    }))
+    .filter((m) => m.to && m.body);
+  const plan = o.plan
+    .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
+    .map((p) => ({
+      day: asString(p.day),
+      action: asString(p.action),
+    }))
+    .filter((p) => p.day && p.action)
+    .slice(0, 6);
+  if (messages.length === 0) return null;
+  return { messages, plan };
+}
+
 export async function extractNextMove(
   transcript: TranscriptTurn[],
   profile?: Profile | null,
@@ -224,17 +273,59 @@ export async function extractNextMove(
     ? `${EXTRACT_PROMPT}\n\nProfile informs realism and specificity; the transcript wins on intent and constraints.`
     : EXTRACT_PROMPT;
 
-  const text = await claudeText(system, user, 2500);
-
-  try {
-    const parsed = normalizeNextMove(extractJson(text));
-    if (!parsed) throw new Error("Missing chosenPath");
-    return parsed;
-  } catch (err) {
-    throw new Error(
-      `Failed to parse next-move JSON: ${err instanceof Error ? err.message : String(err)}`,
-    );
+  async function parseOnce(text: string, label: string): Promise<NextMove> {
+    try {
+      const parsed = normalizeNextMove(extractJson(text));
+      if (!parsed) throw new Error("Missing chosenPath");
+      return parsed;
+    } catch (err) {
+      console.error(
+        `extractNextMove ${label}`,
+        err instanceof Error ? err.message : err,
+      );
+      throw err;
+    }
   }
+
+  const text = await claudeText(system, user, 2500);
+  try {
+    return await parseOnce(text, "first failure");
+  } catch {
+    const retryUser = `${user}\n\nYour previous output was not valid JSON matching the type. Return only the JSON.`;
+    const retryText = await claudeText(system, retryUser, 2500);
+    try {
+      return await parseOnce(retryText, "retry failure");
+    } catch (err) {
+      throw new Error(
+        `Failed to parse next-move JSON: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+}
+
+export async function generatePack(
+  transcript: TranscriptTurn[],
+  nextMove: NextMove,
+): Promise<Pack> {
+  const body = transcript
+    .map((t) => `${t.role === "assistant" ? "Coach" : "User"}: ${t.text}`)
+    .join("\n");
+  const user = [
+    body || "(empty transcript)",
+    "",
+    "NEXT MOVE",
+    `Chosen path: ${nextMove.chosenPath.name} (${nextMove.chosenPath.realism})`,
+    nextMove.chosenPath.whyItFits,
+    `Away from: ${nextMove.awayFrom}`,
+    `Toward: ${nextMove.toward}`,
+    `First message: ${nextMove.message}`,
+    `Experiment: ${nextMove.experiment}`,
+  ].join("\n");
+
+  const text = await claudeText(PACK_PROMPT, user, 3000);
+  const parsed = asPack(extractJson(text));
+  if (!parsed) throw new Error("Invalid pack JSON");
+  return parsed;
 }
 
 export async function draftMessage(

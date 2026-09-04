@@ -23,6 +23,9 @@ export default defineSchema({
     payLinkUrl: v.optional(v.string()),
     payLinkId: v.optional(v.string()),
     paid: v.optional(v.boolean()),
+    startedAt: v.optional(v.union(v.number(), v.null())),
+    pack: v.optional(v.union(v.any(), v.null())),
+    packFailed: v.optional(v.boolean()),
     linkedinUrl: v.optional(v.string()),
     profileStatus: v.optional(
       v.union(
@@ -33,5 +36,8 @@ export default defineSchema({
       ),
     ),
     profile: v.optional(v.union(v.any(), v.null())),
-  }).index("by_createdAt", ["createdAt"]),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_email", ["email"])
+    .index("by_startedAt", ["startedAt"]),
 });

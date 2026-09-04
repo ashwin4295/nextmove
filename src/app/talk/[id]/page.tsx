@@ -1,5 +1,8 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { capsExceeded } from "@/lib/caps";
 import { store } from "@/lib/convexClient";
-import type { Profile, ProfileStatus } from "@/lib/profile";
+import { Wordmark } from "@/lib/ui";
 import { TalkClient } from "./TalkClient";
 
 export const dynamic = "force-dynamic";
@@ -10,29 +13,39 @@ export default async function TalkPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let email: string | null = null;
-  let source = "";
-  let linkedinUrl: string | null = null;
-  let profileStatus: ProfileStatus = "none";
-  let profile: Profile | null = null;
+  let session;
   try {
-    const session = await store.get({ id });
-    email = session?.email ?? null;
-    source = session?.source ?? "";
-    linkedinUrl = session?.linkedinUrl ?? null;
-    profileStatus = session?.profileStatus ?? "none";
-    profile = session?.profile ?? null;
+    session = await store.get({ id });
   } catch {
-    // talk still works if the store cannot load this id
+    notFound();
   }
+  if (!session) notFound();
+
+  if (session.email && session.startedAt == null) {
+    const caps = await store.caps({ email: session.email });
+    if (capsExceeded(caps, "daily")) {
+      return (
+        <main className="mx-auto flex min-h-dvh w-full max-w-[560px] flex-col bg-canvas px-5 pt-5 pb-10">
+          <Link href="/">
+            <Wordmark />
+          </Link>
+          <p className="mt-8 leading-relaxed">
+            We&apos;re full for today. Your spot is saved and we&apos;ll email
+            you when it opens tomorrow.
+          </p>
+        </main>
+      );
+    }
+  }
+
   return (
     <TalkClient
       id={id}
-      email={email}
-      source={source}
-      linkedinUrl={linkedinUrl}
-      profileStatus={profileStatus}
-      profile={profile}
+      email={session.email}
+      source={session.source}
+      linkedinUrl={session.linkedinUrl}
+      profileStatus={session.profileStatus}
+      profile={session.profile}
     />
   );
 }

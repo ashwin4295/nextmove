@@ -1,7 +1,8 @@
 import { ConvexHttpClient } from "convex/browser";
 import { anyApi } from "convex/server";
-import type { NextMove, TranscriptTurn } from "./extract";
-import { normalizeNextMove } from "./extract";
+import { utcDayStart, type Caps } from "./caps";
+import type { NextMove, Pack, TranscriptTurn } from "./extract";
+import { asPack, normalizeNextMove } from "./extract";
 import { asProfile, type Profile, type ProfileStatus } from "./profile";
 
 export type SessionDoc = {
@@ -20,6 +21,9 @@ export type SessionDoc = {
   payLinkUrl: string | null;
   payLinkId: string | null;
   paid: boolean;
+  startedAt: number | null;
+  pack: Pack | null;
+  packFailed: boolean;
   linkedinUrl: string | null;
   profileStatus: ProfileStatus;
   profile: Profile | null;
@@ -48,6 +52,8 @@ export type RecentRow = {
   shares: number;
   email: string | null;
   profileStatus: ProfileStatus;
+  hasPack: boolean;
+  packFailed: boolean;
 };
 
 export type SessionStore = {
@@ -77,6 +83,13 @@ export type SessionStore = {
     linkId: string;
   }) => Promise<void>;
   markPaid: (args: { id: string; paymentId: string }) => Promise<void>;
+  markStarted: (args: { id: string }) => Promise<void>;
+  setPack: (args: {
+    id: string;
+    pack: Pack | null;
+    failed?: boolean;
+  }) => Promise<void>;
+  caps: (args: { email: string }) => Promise<Caps>;
   setContact: (args: {
     id: string;
     contactName: string;
@@ -122,6 +135,9 @@ type SessionExtras = {
   payLinkUrl?: string | null;
   payLinkId?: string | null;
   paid?: boolean;
+  startedAt?: number | null;
+  pack?: Pack | null;
+  packFailed?: boolean;
   linkedinUrl?: string | null;
   profileStatus?: ProfileStatus;
   profile?: Profile | null;
@@ -168,6 +184,9 @@ function hydrate(row: {
   payLinkUrl?: string | null;
   payLinkId?: string | null;
   paid?: boolean;
+  startedAt?: number | null;
+  pack?: unknown;
+  packFailed?: boolean;
   linkedinUrl?: string | null;
   profileStatus?: ProfileStatus;
   profile?: unknown;
@@ -207,6 +226,16 @@ function hydrate(row: {
     null;
   const paid =
     row.paid === true || blob?.__paid === true || extras?.paid === true;
+  const startedAt =
+    (typeof row.startedAt === "number" ? row.startedAt : null) ??
+    (typeof blob?.__startedAt === "number" ? blob.__startedAt : null) ??
+    (typeof extras?.startedAt === "number" ? extras.startedAt : null);
+  const pack =
+    asPack(row.pack) ?? asPack(blob?.__pack) ?? extras?.pack ?? null;
+  const packFailed =
+    row.packFailed === true ||
+    blob?.__packFailed === true ||
+    extras?.packFailed === true;
   const linkedinUrl =
     row.linkedinUrl ??
     (typeof blob?.__linkedinUrl === "string" ? blob.__linkedinUrl : null) ??
@@ -243,6 +272,9 @@ function hydrate(row: {
     payLinkUrl,
     payLinkId,
     paid,
+    startedAt,
+    pack,
+    packFailed,
     linkedinUrl,
     profileStatus,
     profile,
@@ -269,6 +301,9 @@ const memoryStore: SessionStore = {
       payLinkUrl: null,
       payLinkId: null,
       paid: false,
+      startedAt: null,
+      pack: null,
+      packFailed: false,
       linkedinUrl: url,
       profileStatus: url ? "pending" : "none",
       profile: null,
@@ -320,6 +355,32 @@ const memoryStore: SessionStore = {
     if (row.paid) return;
     row.paid = true;
   },
+  async markStarted({ id }) {
+    const row = getMemoryMap().get(id);
+    if (!row) return;
+    if (row.startedAt != null) return;
+    row.startedAt = Date.now();
+  },
+  async setPack({ id, pack, failed }) {
+    const row = getMemoryMap().get(id);
+    if (!row) return;
+    row.pack = pack;
+    row.packFailed = failed === true;
+  },
+  async caps({ email }) {
+    const norm = email.trim().toLowerCase();
+    const rows = [...getMemoryMap().values()];
+    const start = utcDayStart(Date.now());
+    return {
+      emailStarted: rows.filter(
+        (r) =>
+          r.email?.toLowerCase() === norm && typeof r.startedAt === "number",
+      ).length,
+      todayStarted: rows.filter(
+        (r) => typeof r.startedAt === "number" && r.startedAt >= start,
+      ).length,
+    };
+  },
   async setContact({ id, contactName, message }) {
     const row = getMemoryMap().get(id);
     if (!row) return;
@@ -353,6 +414,8 @@ const memoryStore: SessionStore = {
         shares: r.shares,
         email: r.email,
         profileStatus: r.profileStatus,
+        hasPack: r.pack != null,
+        packFailed: r.packFailed,
       }));
   },
   async countUnique() {
@@ -565,6 +628,99 @@ function convexStore(url: string): SessionStore {
         });
       }
     },
+    async markStarted({ id }) {
+      const now = Date.now();
+      const extra = extrasMap().get(id);
+      if (typeof extra?.startedAt === "number") return;
+      rememberExtras(id, { startedAt: now });
+      try {
+        await client().mutation(anyApi.sessions.markStarted, { id });
+      } catch {
+        const row = await client().query(anyApi.sessions.get, { id });
+        if (!row) return;
+        const prev =
+          row.roadmap && typeof row.roadmap === "object" ? row.roadmap : {};
+        if (
+          prev &&
+          typeof prev === "object" &&
+          typeof (prev as { __startedAt?: unknown }).__startedAt === "number"
+        ) {
+          return;
+        }
+        await finishViaExisting(id, row.transcript ?? [], {
+          ...prev,
+          __startedAt: now,
+        });
+      }
+    },
+    async setPack({ id, pack, failed }) {
+      rememberExtras(id, { pack, packFailed: failed === true });
+      try {
+        await client().mutation(anyApi.sessions.setPack, {
+          id,
+          pack,
+          failed: failed === true,
+        });
+      } catch {
+        const row = await client().query(anyApi.sessions.get, { id });
+        if (!row) return;
+        const prev =
+          row.roadmap && typeof row.roadmap === "object" ? row.roadmap : {};
+        await finishViaExisting(id, row.transcript ?? [], {
+          ...prev,
+          __pack: pack,
+          __packFailed: failed === true,
+        });
+      }
+    },
+    async caps({ email }) {
+      try {
+        const raw = (await client().query(anyApi.sessions.caps, {
+          email,
+        })) as Caps;
+        if (
+          raw &&
+          typeof raw.emailStarted === "number" &&
+          typeof raw.todayStarted === "number"
+        ) {
+          return raw;
+        }
+      } catch {
+        // new query is not on the live deployment yet
+      }
+      const ids = recentIdList();
+      const extras = extrasMap();
+      const rows = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const row = await client().query(anyApi.sessions.get, { id });
+            return row ? hydrate(row as SessionDoc) : null;
+          } catch {
+            const extra = extras.get(id);
+            if (!extra) return null;
+            return {
+              email: extra.email,
+              startedAt: extra.startedAt ?? null,
+            };
+          }
+        }),
+      );
+      const norm = email.trim().toLowerCase();
+      const start = utcDayStart(Date.now());
+      const seen = rows.filter(
+        (r): r is { email: string | null; startedAt: number | null } =>
+          r != null,
+      );
+      return {
+        emailStarted: seen.filter(
+          (r) =>
+            r.email?.toLowerCase() === norm && typeof r.startedAt === "number",
+        ).length,
+        todayStarted: seen.filter(
+          (r) => typeof r.startedAt === "number" && r.startedAt >= start,
+        ).length,
+      };
+    },
     async setContact({ id, contactName, message }) {
       try {
         await client().mutation(anyApi.sessions.setContact, {
@@ -621,17 +777,44 @@ function convexStore(url: string): SessionStore {
       try {
         const rows = (await client().query(anyApi.sessions.listRecent, {
           limit,
-        })) as RecentRow[];
-        return rows.map((r) => {
-          const extra = extrasMap().get(String(r._id));
-          return {
-            ...r,
-            _id: String(r._id),
-            email: r.email ?? extra?.email ?? null,
-            paid: r.paid === true || extra?.paid === true,
-            profileStatus: r.profileStatus ?? extra?.profileStatus ?? "none",
-          };
-        });
+        })) as Array<RecentRow & { hasPack?: boolean; packFailed?: boolean }>;
+        const legacy = rows.every(
+          (r) => r.hasPack === undefined && r.packFailed === undefined,
+        );
+        const mapped = await Promise.all(
+          rows.map(async (r) => {
+            const extra = extrasMap().get(String(r._id));
+            let paid = r.paid === true || extra?.paid === true;
+            let hasPack = r.hasPack === true || extra?.pack != null;
+            let packFailed =
+              r.packFailed === true || extra?.packFailed === true;
+            if (legacy && (!paid || (!hasPack && !packFailed))) {
+              try {
+                const full = await client().query(anyApi.sessions.get, {
+                  id: r._id,
+                });
+                if (full) {
+                  const doc = hydrate(full as SessionDoc);
+                  paid = paid || doc.paid;
+                  hasPack = hasPack || doc.pack != null;
+                  packFailed = packFailed || doc.packFailed;
+                }
+              } catch {
+                // extras / list fields stand
+              }
+            }
+            return {
+              ...r,
+              _id: String(r._id),
+              email: r.email ?? extra?.email ?? null,
+              paid,
+              profileStatus: r.profileStatus ?? extra?.profileStatus ?? "none",
+              hasPack,
+              packFailed,
+            };
+          }),
+        );
+        return mapped;
       } catch {
         const ids = recentIdList().slice(0, Math.min(Math.max(limit, 1), 25));
         const rows = await Promise.all(
@@ -652,6 +835,8 @@ function convexStore(url: string): SessionStore {
             shares: r.shares,
             email: r.email,
             profileStatus: r.profileStatus,
+            hasPack: r.pack != null,
+            packFailed: r.packFailed,
           }));
       }
     },

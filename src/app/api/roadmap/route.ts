@@ -14,7 +14,7 @@ function requestOrigin(req: Request) {
   const proto = req.headers.get("x-forwarded-proto") ?? "http";
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   if (host) return `${proto}://${host}`;
-  return "https://nextmove-pi.vercel.app";
+  return "https://nextmove.thedirectorloop.com";
 }
 
 function sendNextMoveEmail(

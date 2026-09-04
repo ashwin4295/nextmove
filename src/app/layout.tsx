@@ -18,9 +18,16 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://nextmove.thedirectorloop.com"),
   title: "NextMove",
   description:
     "Talk it through with an AI coach for about ten minutes. You leave with a chosen path, an honest realism read, and the first message to someone you already know.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    url: "https://nextmove.thedirectorloop.com",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { capsExceeded } from "@/lib/caps";
 import { store } from "@/lib/convexClient";
 import { normalizeLinkedInUrl } from "@/lib/profile";
 
@@ -31,6 +32,13 @@ export async function POST(req: Request) {
     }
     linkedinUrl = normalised;
   }
+  const caps = await store.caps({ email });
+  if (capsExceeded(caps, "email")) {
+    return NextResponse.json({ error: "email_cap" });
+  }
   const id = await store.create({ source, name, email, linkedinUrl });
+  if (capsExceeded(caps, "daily")) {
+    return NextResponse.json({ id, error: "daily_cap" });
+  }
   return NextResponse.json({ id });
 }

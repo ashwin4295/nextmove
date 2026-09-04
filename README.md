@@ -2,8 +2,7 @@
 
 **An AI career coach you talk to. Ten minutes. One honest next move.**
 
-Live: https://nextmove-pi.vercel.app
-Built solo during GrowthX Build Week, Season 03 (29 Aug to 5 Sep 2026).
+Live: https://nextmove.thedirectorloop.com
 
 ## The one-paragraph test
 
@@ -58,11 +57,3 @@ Without `NEXT_PUBLIC_CONVEX_URL` the app runs on an in-memory store for local te
 | `/talk/[id]` | the conversation (voice, with typed fallback) |
 | `/r/[id]` | your next move, the first message, other doors, share |
 | `/admin?key=` | counters: started, act reached, written, sent, shared, last 25 sessions |
-
-## Build Week log
-
-- Thu 3 Sep: idea locked (late), milestone A ugly flow live by 10:40, milestone B (ten-minute script, first-message output, design system) live by 11:30, three production bugs fixed from live testing (Vercel 10 s timeout on extraction, mic-denied call generating an empty result, sections hidden before animation), voice failure traced through Vapi logs to an ElevenLabs credential and moved to Aura-2.
-- Fri 4 Sep: three observed user sessions, distribution to GrowthX, WhatsApp, LinkedIn and email, fixes.
-- Sat 5 Sep: verification, numbers, submission.
-
-Plans and reports are in the repo root (`IDEA_SCOPE.md`, `PLAN-M-A.md`, `PLAN-M-B.md`, `MILESTONE-*-REPORT.md`).

@@ -123,7 +123,7 @@ export default async function Image({
             color: "#586257",
           }}
         >
-          nextmove-pi.vercel.app
+          nextmove.thedirectorloop.com
         </div>
       </div>
     ),

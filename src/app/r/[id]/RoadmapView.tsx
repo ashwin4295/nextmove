@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { track } from "@/lib/analytics";
-import type { NextMove, TranscriptTurn } from "@/lib/extract";
+import type { NextMove, Pack, TranscriptTurn } from "@/lib/extract";
 import type { Profile } from "@/lib/profile";
 import {
   Badge,
@@ -42,6 +42,7 @@ export function NextMoveView({
   contactName: initialContactName,
   source,
   paid = false,
+  pack = null,
   profile = null,
 }: {
   id: string;
@@ -51,6 +52,7 @@ export function NextMoveView({
   contactName: string | null;
   source: string;
   paid?: boolean;
+  pack?: Pack | null;
   profile?: Profile | null;
 }) {
   const router = useRouter();
@@ -72,6 +74,7 @@ export function NextMoveView({
   const [correctError, setCorrectError] = useState("");
   const [packBusy, setPackBusy] = useState(false);
   const [packError, setPackError] = useState("");
+  const [copiedPack, setCopiedPack] = useState<number | null>(null);
 
   const userTurns = transcript.filter(
     (t) => t.role === "user" && t.text.trim(),
@@ -422,14 +425,51 @@ export function NextMoveView({
           <Button onClick={share}>
             {shared ? "Link copied" : "Share this page"}
           </Button>
-          <Button
-            variant="secondary"
-            href="https://calendly.com/mbbprepofficial/15min?utm_source=nextmove"
-          >
-            Talk it through with Ashwin
-          </Button>
         </div>
 
+        {paid && pack ? (
+          <div className="mt-10">
+            <Eyebrow>YOUR PACK</Eyebrow>
+            <div className="mt-4 flex flex-col gap-4">
+              {pack.messages.map((m, i) => (
+                <Card key={`${m.to}-${i}`} className="p-6">
+                  <p className="text-sm font-semibold">To: {m.to}</p>
+                  <p className="mt-4 select-text leading-relaxed">{m.body}</p>
+                  <div className="mt-5">
+                    <Button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(m.body);
+                        } catch {
+                          // clipboard may be blocked
+                        }
+                        setCopiedPack(i);
+                        window.setTimeout(() => setCopiedPack(null), 2000);
+                      }}
+                    >
+                      {copiedPack === i ? "Copied" : "Copy"}
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            <p className="mt-8 text-lg font-semibold">Your two weeks</p>
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-surface">
+              <table className="w-full text-sm">
+                <tbody>
+                  {pack.plan.map((row) => (
+                    <tr key={row.day} className="border-b border-line last:border-0">
+                      <td className="px-4 py-3 font-semibold align-top whitespace-nowrap">
+                        {row.day}
+                      </td>
+                      <td className="px-4 py-3 leading-relaxed">{row.action}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
         <Card className="mt-10 p-6">
           {paid ? (
             <>
@@ -462,6 +502,7 @@ export function NextMoveView({
             </>
           )}
         </Card>
+        )}
 
         <details className="group mt-10 border-t border-b border-line py-4">
           <summary className="flex cursor-pointer items-center justify-between gap-3 font-semibold">

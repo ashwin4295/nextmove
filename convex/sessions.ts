@@ -54,6 +54,9 @@ export const create = mutationGeneric({
       profileStatus:
         args.profileStatus ?? (linkedinUrl ? "pending" : "none"),
       profile: args.profile ?? null,
+      startedAt: null,
+      pack: null,
+      packFailed: false,
     });
   },
 });
@@ -166,7 +169,77 @@ export const get = queryGeneric({
       linkedinUrl: row.linkedinUrl ?? null,
       profileStatus: row.profileStatus ?? "none",
       profile: row.profile ?? null,
+      startedAt: row.startedAt ?? null,
+      pack: row.pack ?? null,
+      packFailed: row.packFailed === true,
     };
+  },
+});
+
+function utcDayStart(ts: number) {
+  const d = new Date(ts);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+export const markStarted = mutationGeneric({
+  args: { id: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.id);
+    if (!row) return;
+    if (typeof row.startedAt === "number") return;
+    await ctx.db.patch(args.id, { startedAt: Date.now() });
+  },
+});
+
+export const setPack = mutationGeneric({
+  args: {
+    id: v.id("sessions"),
+    pack: v.union(v.any(), v.null()),
+    failed: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.id);
+    if (!row) return;
+    await ctx.db.patch(args.id, {
+      pack: args.pack,
+      packFailed: args.failed === true,
+    });
+  },
+});
+
+export const caps = queryGeneric({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const email = args.email.trim();
+    const variants = Array.from(new Set([email, email.toLowerCase()]));
+    const seen = new Set<string>();
+    let emailStarted = 0;
+    for (const variant of variants) {
+      const rows = await ctx.db
+        .query("sessions")
+        .withIndex("by_email", (q) => q.eq("email", variant))
+        .collect();
+      for (const r of rows) {
+        const id = String(r._id);
+        if (seen.has(id)) continue;
+        seen.add(id);
+        if (typeof r.startedAt === "number") emailStarted += 1;
+      }
+    }
+
+    const start = utcDayStart(Date.now());
+    const end = start + 86_400_000;
+    const todayRows = await ctx.db
+      .query("sessions")
+      .withIndex("by_startedAt", (q) =>
+        q.gte("startedAt", start).lt("startedAt", end),
+      )
+      .collect();
+    const todayStarted = todayRows.filter(
+      (r) => typeof r.startedAt === "number",
+    ).length;
+
+    return { emailStarted, todayStarted };
   },
 });
 
@@ -232,6 +305,8 @@ export const listRecent = queryGeneric({
       shares: r.shares ?? 0,
       email: r.email ?? null,
       profileStatus: r.profileStatus ?? "none",
+      hasPack: r.pack != null,
+      packFailed: r.packFailed === true,
     }));
   },
 });

@@ -1,13 +1,59 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { store } from "@/lib/convexClient";
-import { toPublicNextMove } from "@/lib/extract";
+import { generatePack, toPublicNextMove, type Pack } from "@/lib/extract";
+import { paymentLinkIsPaid } from "@/lib/razorpay";
 import { NextMoveView } from "./RoadmapView";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function firstString(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+function requestOriginFromHeaders(h: Headers) {
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (host) return `${proto}://${host}`;
+  return "https://nextmove.thedirectorloop.com";
+}
+
+function sendPackEmail(email: string, pack: Pack, id: string, origin: string) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+  const text = [
+    ...pack.messages.flatMap((m) => [`To: ${m.to}`, "", m.body, ""]),
+    "Your two weeks",
+    ...pack.plan.map((row) => `${row.day}: ${row.action}`),
+    "",
+    `${origin}/r/${id}`,
+  ].join("\n");
+  void fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "NextMove <nextmove@mbbprep.com>",
+      to: [email],
+      subject: "Your Next Move Pack",
+      text,
+    }),
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        console.error("pack email failed", res.status, await res.text());
+      }
+    })
+    .catch((err) => {
+      console.error(
+        "pack email failed",
+        err instanceof Error ? err.message : err,
+      );
+    });
 }
 
 export default async function NextMovePage({
@@ -19,7 +65,13 @@ export default async function NextMovePage({
 }) {
   const { id } = await params;
   const query = await searchParams;
-  const session = await store.get({ id });
+
+  let session;
+  try {
+    session = await store.get({ id });
+  } catch {
+    notFound();
+  }
   if (!session) notFound();
 
   const paidFlag = firstString(query.paid);
@@ -28,13 +80,41 @@ export default async function NextMovePage({
   const paymentId = firstString(query.razorpay_payment_id) ?? "";
 
   let paid = session.paid === true;
-  if (
-    paidFlag === "1" &&
-    linkStatus === "paid" &&
-    referenceId === id
-  ) {
-    await store.markPaid({ id, paymentId });
-    paid = true;
+  let pack = session.pack;
+  const isCallback =
+    paidFlag === "1" && linkStatus === "paid" && referenceId === id;
+
+  if (isCallback && session.payLinkId) {
+    const verified = await paymentLinkIsPaid(session.payLinkId);
+    if (verified) {
+      if (session.paid !== true) {
+        await store.markPaid({ id, paymentId });
+      }
+      paid = true;
+      if (!session.pack) {
+        try {
+          const nextMove = session.roadmap;
+          if (!nextMove) throw new Error("no next move");
+          pack = await generatePack(session.transcript, nextMove);
+          await store.setPack({ id, pack });
+          if (session.email) {
+            sendPackEmail(
+              session.email,
+              pack,
+              id,
+              requestOriginFromHeaders(await headers()),
+            );
+          }
+        } catch (err) {
+          console.error(
+            "pack generation failed",
+            err instanceof Error ? err.message : err,
+          );
+          await store.setPack({ id, pack: null, failed: true });
+          pack = null;
+        }
+      }
+    }
   }
 
   return (
@@ -46,6 +126,7 @@ export default async function NextMovePage({
       contactName={session.contactName}
       source={session.source}
       paid={paid}
+      pack={pack}
       profile={session.profile}
     />
   );

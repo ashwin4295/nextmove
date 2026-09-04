@@ -33,6 +33,35 @@ const VOICE_LABEL: Record<VoicePhase, string> = {
   speaking: "Speaking",
 };
 
+function voiceForTier(tier: string | undefined) {
+  if (tier === "eleven") {
+    return {
+      provider: "11labs" as const,
+      voiceId: "EXAVITQu4vr4xnSDxMaL",
+      model: "eleven_turbo_v2_5",
+    };
+  }
+  if (tier === "aura") {
+    return {
+      provider: "deepgram" as const,
+      model: "aura-2",
+      voiceId: "thalia",
+    };
+  }
+  if (tier === "male") {
+    return {
+      provider: "cartesia" as const,
+      voiceId: "638efaaa-4d0c-442e-b701-3fae16aad012",
+      model: "sonic-2",
+    };
+  }
+  return {
+    provider: "cartesia" as const,
+    voiceId: "3b554273-4299-48b9-9aaf-eefd438e3941",
+    model: "sonic-2",
+  };
+}
+
 function formatElapsed(seconds: number) {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -279,17 +308,7 @@ export function TalkClient({
           },
         ],
       },
-      // Aura-2 by default: ElevenLabs via Vapi failed with
-      // pipeline-error-eleven-labs-voice-failed (account credential).
-      // Set NEXT_PUBLIC_VOICE_TIER=eleven to opt back in once fixed.
-      voice:
-        process.env.NEXT_PUBLIC_VOICE_TIER === "eleven"
-          ? {
-              provider: "11labs" as const,
-              voiceId: "EXAVITQu4vr4xnSDxMaL",
-              model: "eleven_turbo_v2_5",
-            }
-          : { provider: "vapi" as const, voiceId: "Rohan" },
+      voice: voiceForTier(process.env.NEXT_PUBLIC_VOICE_TIER),
       transcriber: {
         provider: "deepgram" as const,
         model: "nova-2",
@@ -355,7 +374,20 @@ export function TalkClient({
     if (email) identifyEmail(email);
   }
 
+  async function markSessionStarted() {
+    try {
+      await fetch("/api/started", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+    } catch {
+      // conversation still proceeds
+    }
+  }
+
   async function beginVoice() {
+    await markSessionStarted();
     onConversationStarted();
     setError("");
     setTooShort("");
@@ -373,7 +405,8 @@ export function TalkClient({
     }
   }
 
-  function openText() {
+  async function openText() {
+    await markSessionStarted();
     onConversationStarted();
     try {
       vapiRef.current?.stop();
