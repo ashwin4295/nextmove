@@ -345,12 +345,18 @@ export async function extractNextMove(
       console.error(
         `extractNextMove ${label}`,
         err instanceof Error ? err.message : err,
+        "| raw head:",
+        text.slice(0, 300).replace(/\s+/g, " "),
+        "| raw tail:",
+        text.slice(-200).replace(/\s+/g, " "),
+        "| length:",
+        text.length,
       );
       throw err;
     }
   }
 
-  const text = await claudeText(system, user, 2500);
+  const text = await claudeText(system, user, 4000);
   try {
     return await parseOnce(text, "first failure");
   } catch (firstErr) {
@@ -359,7 +365,7 @@ export async function extractNextMove(
         ? `Your previous result gave two doors the same label (${firstErr.labels.join(", ")}). Every door must have a distinct, specific role name that says what makes it different from the others. Return only the JSON.`
         : "Your previous output was not valid JSON matching the type. Return only the JSON.";
     const retryUser = `${user}\n\n${reason}`;
-    const retryText = await claudeText(system, retryUser, 2500);
+    const retryText = await claudeText(system, retryUser, 4000);
     try {
       return await parseOnce(retryText, "retry failure", true);
     } catch (err) {
