@@ -503,15 +503,53 @@ export function NextMoveView({
             </>
           ) : (
             <>
-              <p className="text-lg font-semibold">The Next Move Pack</p>
+              <p className="text-lg font-semibold">Three more messages, written for you</p>
               <p className="mt-3 leading-relaxed">
-                Three more messages written for you: one to a hiring manager in
-                that world, one to a mentor you admire, and one to your current
-                manager for the internal version of this move. Plus a two-week
-                follow-up plan and a re-run of this conversation after you have
-                had the first one.
+                The message above opens one door. The pack writes the other
+                three you will need in the next two weeks, in your words, from
+                this conversation:
               </p>
-              <p className="mt-3 text-[15px] font-medium">₹299, one time.</p>
+              <ul className="mt-3 flex flex-col gap-2 text-[15px]">
+                <li>
+                  <span className="font-semibold">To a hiring manager</span> in
+                  the world you chose: the note that gets you a real conversation,
+                  not a job application.
+                </li>
+                <li>
+                  <span className="font-semibold">To a mentor you admire</span>:
+                  the ask that senior people actually say yes to.
+                </li>
+                <li>
+                  <span className="font-semibold">To your current manager</span>:
+                  the internal version of this move, so you are not choosing
+                  between leaving and staying quiet.
+                </li>
+                <li>
+                  <span className="font-semibold">A two-week plan</span>: who to
+                  message on which day, and what to do if they do not reply.
+                </li>
+              </ul>
+              <details className="mt-4 rounded-[10px] border border-line p-4">
+                <summary className="cursor-pointer text-[15px] font-semibold">
+                  See a sample message
+                </summary>
+                <p className="mt-3 text-[15px] leading-relaxed text-muted">
+                  To: a hiring manager, applied AI product, Series B fintech
+                </p>
+                <p className="mt-2 text-[15px] leading-relaxed">
+                  Hi Anjali, I run lending product at a fintech in Bangalore,
+                  nine years in, and for the last year I have been closer to
+                  the dashboards than to the building. Your team is doing the
+                  version of product work I keep coming back to. I am not
+                  asking about an opening. I would like twenty minutes to hear
+                  how you staff applied AI work and what you look for in
+                  someone who has shipped in a regulated domain but not yet
+                  with models. If this month is full, no problem at all.
+                </p>
+              </details>
+              <p className="mt-4 text-[15px] font-medium">
+                ₹299, one time. Ready within a minute of paying.
+              </p>
               <div className="mt-5">
                 <Button onClick={onPack} disabled={packBusy}>
                   {packBusy ? "Opening Razorpay…" : "Get the pack"}

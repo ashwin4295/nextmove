@@ -82,6 +82,11 @@ Rules:
 - decisionDate is an ISO date 30–45 days from today (${new Date().toISOString().slice(0, 10)}).
 - privateItems: anything the user asked to keep private.
 - Never use an em dash or en dash anywhere in any string; use a comma, a full stop, or a colon instead.
+- CONSULTING DOOR RUBRIC (apply whenever a door is strategy or management consulting; grade the door, not the person):
+  Evidence that raises realism: 2 to 8 years of experience (0 to 2 also fine for campus routes); a target-school MBA or top engineering/commerce college; current employer is a known brand, a top startup, a GCC of a global firm, or a Big 4 / boutique consulting; visible quantitative or analytical work; the person structures their answers and speaks in reasons; they have already spoken to consultants or practised cases; they can name a specific firm tier and why.
+  Evidence that lowers realism: more than 12 years of experience without prior consulting (the entry is a step down in title and pay); a hard no to travel or long hours; a stated pay floor above an entry-level consultant's package; no examples of analytical work; answers that ramble or avoid structure; wanting consulting for prestige or exit options only, with no problem-solving pull.
+  Grades: "strong fit" needs three or more raisers and no hard lowerer. "realistic" needs two raisers and at most one soft lowerer. "a stretch" is one raiser or a hard lowerer that can be worked around (an MBA route, a boutique first). "long shot" is a hard lowerer that cannot be worked around at their stage, or no raisers at all.
+  Always name the tier honestly in firstGap: MBB, Big 4 strategy, boutique, or in-house strategy, and say which one is realistic for this person and what would sink it.
 - Before returning, check that chosenPath.name and every otherPaths[].name are distinct and specific. If not, fix them.
 - Return ONLY JSON.`;
 
