@@ -511,7 +511,7 @@ export function NextMoveView({
                 follow-up plan and a re-run of this conversation after you have
                 had the first one.
               </p>
-              <p className="mt-3 text-[15px] font-medium">₹99, one time.</p>
+              <p className="mt-3 text-[15px] font-medium">₹299, one time.</p>
               <div className="mt-5">
                 <Button onClick={onPack} disabled={packBusy}>
                   {packBusy ? "Opening Razorpay…" : "Get the pack"}

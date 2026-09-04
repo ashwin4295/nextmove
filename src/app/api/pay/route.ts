@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       if (session.email) customer.email = session.email;
 
       const payload: Record<string, unknown> = {
-        amount: 9900,
+        amount: 29900,
         currency: "INR",
         accept_partial: false,
         description: "NextMove Pack",
