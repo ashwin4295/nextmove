@@ -1,3 +1,4 @@
+import { HeroFork } from "@/components/HeroFork";
 import { Landing } from "./landing";
 
 export default async function Home({
@@ -6,5 +7,5 @@ export default async function Home({
   searchParams: Promise<{ src?: string }>;
 }) {
   const { src } = await searchParams;
-  return <Landing source={src ?? ""} />;
+  return <Landing source={src ?? ""} heroArt={<HeroFork />} />;
 }

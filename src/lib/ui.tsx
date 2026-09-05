@@ -1,12 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import {
-  useEffect,
-  useRef,
-  type ButtonHTMLAttributes,
-  type ReactNode,
-} from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import type { Realism } from "./extract";
 
 export function Wordmark({ className = "" }: { className?: string }) {
@@ -20,11 +13,11 @@ export function Wordmark({ className = "" }: { className?: string }) {
 
 const buttonClass: Record<"primary" | "secondary" | "ghost", string> = {
   primary:
-    "h-[50px] rounded-[10px] bg-forest px-6 text-[15px] font-semibold text-white hover:bg-forest-deep disabled:opacity-50 control-fade",
+    "group h-[52px] rounded-none bg-forest px-6 font-mono text-[0.75rem] font-medium uppercase tracking-[0.12em] text-canvas hover:bg-forest-deep disabled:opacity-50",
   secondary:
-    "h-[50px] rounded-[10px] border border-line bg-transparent px-6 text-[15px] font-semibold text-ink hover:bg-sage disabled:opacity-50 control-fade",
+    "h-[52px] rounded-none border border-ink bg-transparent px-6 font-mono text-[0.75rem] font-medium uppercase tracking-[0.12em] text-ink hover:bg-sage disabled:opacity-50",
   ghost:
-    "min-h-11 rounded-[10px] px-2 py-2 text-[15px] font-medium text-ink hover:underline disabled:opacity-50 control-fade",
+    "min-h-11 rounded-none px-2 py-2 font-mono text-[0.75rem] font-medium uppercase tracking-[0.12em] text-ink hover:underline disabled:opacity-50",
 };
 
 type ButtonProps = {
@@ -34,6 +27,27 @@ type ButtonProps = {
   className?: string;
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
+function ButtonInner({
+  variant,
+  children,
+}: {
+  variant: "primary" | "secondary" | "ghost";
+  children: ReactNode;
+}) {
+  if (variant !== "primary") return children;
+  return (
+    <>
+      <span>{children}</span>
+      <span
+        className="inline-block transition-transform group-hover:translate-x-1"
+        aria-hidden
+      >
+        →
+      </span>
+    </>
+  );
+}
+
 export function Button({
   variant = "primary",
   href,
@@ -42,7 +56,11 @@ export function Button({
   type,
   ...props
 }: ButtonProps) {
-  const cls = `inline-flex items-center justify-center ${buttonClass[variant]} ${className}`;
+  const justify = variant === "primary" ? "justify-between gap-4" : "justify-center";
+  const cls = `inline-flex items-center ${justify} ${buttonClass[variant]} ${className}`;
+  const inner = (
+    <ButtonInner variant={variant}>{children}</ButtonInner>
+  );
   if (href) {
     const external =
       href.startsWith("http") ||
@@ -51,19 +69,19 @@ export function Button({
     if (external) {
       return (
         <a href={href} className={cls}>
-          {children}
+          {inner}
         </a>
       );
     }
     return (
       <Link href={href} className={cls}>
-        {children}
+        {inner}
       </Link>
     );
   }
   return (
     <button type={type ?? "button"} className={cls} {...props}>
-      {children}
+      {inner}
     </button>
   );
 }
@@ -79,7 +97,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-line bg-surface ${shadow ? "card-shadow" : ""} ${className}`}
+      className={`rounded-none border border-rule bg-paper ${shadow ? "card-shadow" : ""} ${className}`}
     >
       {children}
     </div>
@@ -95,7 +113,7 @@ export function Eyebrow({
 }) {
   return (
     <p
-      className={`text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-muted ${className}`}
+      className={`font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-forest ${className}`}
     >
       {children}
     </p>
@@ -103,10 +121,10 @@ export function Eyebrow({
 }
 
 const badgeTone: Record<Realism, string> = {
-  "strong fit": "bg-sage text-forest",
-  realistic: "bg-[#E4EEF7] text-[#1F4E79]",
-  "a stretch": "bg-[#F6EBDD] text-[#8A5A2B]",
-  "long shot": "bg-[#EEF0EC] text-muted",
+  "strong fit": "text-forest",
+  realistic: "text-forest",
+  "a stretch": "text-ink",
+  "long shot": "text-muted",
 };
 
 export function Badge({
@@ -118,7 +136,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeTone[tone]}`}
+      className={`inline-flex rounded-none font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] ${badgeTone[tone]}`}
     >
       {children ?? tone}
     </span>
@@ -133,56 +151,40 @@ export function Container({
   className?: string;
 }) {
   return (
-    <div className={`mx-auto w-full max-w-[1200px] px-5 ${className}`}>
+    <div className={`mx-auto w-full max-w-[1120px] px-5 ${className}`}>
       {children}
     </div>
   );
 }
 
-export function Reveal({
-  children,
-  className = "",
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const motion = window.matchMedia("(prefers-reduced-motion: no-preference)");
-    if (!motion.matches) {
-      el.classList.add("in-view");
-      return;
-    }
-    document.documentElement.classList.add("js-anim");
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in-view");
-            io.unobserve(entry.target);
-          }
-        }
-      },
-      { threshold: 0.12 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
+export function Rule({ className = "" }: { className?: string }) {
   return (
-    <div ref={ref} className={`reveal ${className}`}>
+    <div
+      role="presentation"
+      className={`h-px w-full bg-[var(--rule)] ${className}`}
+    />
+  );
+}
+
+export function Frame({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative">
       {children}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-1/2 z-30 hidden w-[min(1120px,100%)] -translate-x-1/2 md:block"
+      >
+        <div className="absolute inset-y-0 left-0 w-px bg-[var(--rule)]" />
+        <div className="absolute inset-y-0 right-0 w-px bg-[var(--rule)]" />
+      </div>
     </div>
   );
 }
 
 const sectionTone: Record<"canvas" | "sage" | "forest", string> = {
-  canvas: "bg-canvas text-ink py-14 md:py-[104px]",
-  sage: "bg-sage text-ink py-14 md:py-[104px]",
-  forest: "bg-forest py-12 text-white md:py-[72px]",
+  canvas: "bg-canvas text-ink",
+  sage: "bg-sage text-ink",
+  forest: "bg-forest text-canvas",
 };
 
 export function Section({
@@ -201,9 +203,9 @@ export function Section({
       id={id}
       className={`scroll-mt-24 ${sectionTone[tone]} ${className}`}
     >
-      <Container>
-        <Reveal>{children}</Reveal>
-      </Container>
+      <Rule />
+      <Container className="py-[72px] md:py-[112px]">{children}</Container>
+      <Rule className="-mb-px" />
     </section>
   );
 }
@@ -218,16 +220,12 @@ export function RouteLine({
   if (variant === "hero") {
     return (
       <svg
-        className={`h-full w-8 shrink-0 text-line ${className}`}
+        className={`h-full w-8 shrink-0 text-rule ${className}`}
         viewBox="0 0 32 280"
         fill="none"
         aria-hidden
       >
-        <path
-          d="M16 12 V268"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
+        <path d="M16 12 V268" stroke="currentColor" strokeWidth="1.5" />
         <path d="M16 88 H28" stroke="currentColor" strokeWidth="1.5" />
         <path d="M16 168 H28" stroke="currentColor" strokeWidth="1.5" />
         <path d="M16 248 H28" stroke="currentColor" strokeWidth="1.5" />
@@ -248,7 +246,7 @@ export function RouteLine({
   if (variant === "result") {
     return (
       <svg
-        className={`h-8 w-[120px] text-line ${className}`}
+        className={`h-8 w-[120px] text-rule ${className}`}
         viewBox="0 0 120 32"
         fill="none"
         aria-hidden
@@ -266,7 +264,7 @@ export function RouteLine({
 
   return (
     <svg
-      className={`mx-auto h-10 w-[220px] text-line ${className}`}
+      className={`mx-auto h-10 w-[220px] text-rule ${className}`}
       viewBox="0 0 220 40"
       fill="none"
       aria-hidden
@@ -287,21 +285,15 @@ export function Waveform({
 }: {
   state: "idle" | "connecting" | "listening" | "speaking" | "writing";
 }) {
-  const animate = state === "listening" || state === "speaking";
+  void state;
   const heights = [10, 18, 12, 20, 14];
   return (
-    <div
-      className="flex h-6 items-end gap-[3px]"
-      aria-hidden
-    >
+    <div className="flex h-6 items-end gap-[3px]" aria-hidden>
       {heights.map((h, i) => (
         <span
           key={i}
-          className={`w-[3px] rounded-sm bg-forest ${animate ? "wave-bar" : ""}`}
-          style={{
-            height: h,
-            animationDelay: animate ? `${i * 90}ms` : undefined,
-          }}
+          className="w-[3px] rounded-none bg-forest"
+          style={{ height: h }}
         />
       ))}
     </div>
@@ -316,6 +308,8 @@ export function StateLabel({
   className?: string;
 }) {
   return (
-    <p className={`text-sm font-medium text-muted ${className}`}>{children}</p>
+    <p className={`font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-muted ${className}`}>
+      {children}
+    </p>
   );
 }

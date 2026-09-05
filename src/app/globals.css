@@ -2,34 +2,32 @@
 
 :root {
   --canvas: #f7f6f2;
-  --surface: #ffffff;
+  --paper: #fbfaf7;
   --sage: #e7ece5;
-  --line: #d8ddd5;
+  --rule: #d8ddd5;
   --ink: #20251f;
-  --muted: #586257;
+  --muted: #6b6560;
   --forest: #204b3a;
   --forest-deep: #17372b;
-  --warm: #b56b45;
-  --realistic-fg: #1f4e79;
-  --realistic-bg: #e4eef7;
-  --stretch-fg: #8a5a2b;
-  --stretch-bg: #f6ebdd;
-  --longshot-bg: #eef0ec;
+  --line: var(--rule);
+  --surface: var(--paper);
   --shadow-card: 0 12px 32px rgba(32, 37, 31, 0.08);
 }
 
 @theme inline {
   --color-canvas: var(--canvas);
-  --color-surface: var(--surface);
+  --color-paper: var(--paper);
   --color-sage: var(--sage);
+  --color-rule: var(--rule);
   --color-line: var(--line);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-forest: var(--forest);
   --color-forest-deep: var(--forest-deep);
-  --color-warm: var(--warm);
+  --color-surface: var(--surface);
   --font-sans: var(--font-inter);
   --font-display: var(--font-source-serif);
+  --font-mono: var(--font-jetbrains);
 }
 
 html {
@@ -41,23 +39,58 @@ body {
   color: var(--ink);
   font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.0625rem;
-  line-height: 1.65;
+  line-height: 1.6;
 }
 
-h1,
-.h1 {
-  font-family: var(--font-source-serif), ui-serif, Georgia, serif;
-  font-weight: 400;
-  font-size: clamp(2.75rem, 5.2vw, 4.75rem);
-  line-height: 1.05;
+@layer base {
+  h1,
+  .h1 {
+    font-family: var(--font-source-serif), ui-serif, Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(3.25rem, 7vw, 6rem);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+    max-width: 12ch;
+  }
+
+  h2,
+  .h2 {
+    font-family: var(--font-source-serif), ui-serif, Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(2.25rem, 4.5vw, 3.75rem);
+    line-height: 1.02;
+    max-width: 16ch;
+  }
+
+  @media (max-width: 767px) {
+    h1,
+    .h1 {
+      font-size: 2.75rem;
+    }
+
+    h2,
+    .h2 {
+      font-size: 2rem;
+    }
+  }
 }
 
-h2,
-.h2 {
-  font-family: var(--font-source-serif), ui-serif, Georgia, serif;
-  font-weight: 400;
-  font-size: clamp(2rem, 3.4vw, 3rem);
-  line-height: 1.1;
+.hero-h1 {
+  max-width: none;
+}
+
+.hero-h1 span {
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .hero-h1 br {
+    display: none;
+  }
+
+  .hero-h1 span {
+    white-space: normal;
+  }
 }
 
 :focus-visible {
@@ -69,57 +102,16 @@ h2,
   box-shadow: var(--shadow-card);
 }
 
+.bg-forest {
+  --muted: #c9d4cc;
+  --rule: rgba(247, 246, 242, 0.28);
+  --line: var(--rule);
+}
+
 details > summary {
   list-style: none;
 }
 
 details > summary::-webkit-details-marker {
   display: none;
-}
-
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes wave-bar {
-  0%,
-  100% {
-    transform: scaleY(0.45);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  html.js-anim .reveal:not(.in-view) {
-    transform: translateY(12px);
-  }
-
-  html.js-anim .reveal.in-view {
-    animation: fade-up 350ms ease forwards;
-  }
-
-  .scene-fade {
-    transition: opacity 350ms ease;
-  }
-
-  .control-fade {
-    transition:
-      background-color 200ms ease,
-      color 200ms ease,
-      border-color 200ms ease;
-  }
-
-  .wave-bar {
-    animation: wave-bar 900ms ease-in-out infinite;
-    transform-origin: center bottom;
-  }
 }

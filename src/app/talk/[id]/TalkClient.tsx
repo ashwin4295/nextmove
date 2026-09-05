@@ -77,11 +77,11 @@ function actFromText(text: string, current: 1 | 2 | 3): 1 | 2 | 3 {
 
 function PhaseRow({ act }: { act: 1 | 2 | 3 }) {
   return (
-    <p className="text-[15px]">
+    <p className="font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em]">
       {([1, 2, 3] as const).map((n, i) => (
         <span key={n}>
           {i > 0 ? <span className="text-muted"> · </span> : null}
-          <span className={act === n ? "font-semibold text-forest" : "text-muted"}>
+          <span className={act === n ? "text-forest" : "text-muted"}>
             {PHASE[n]}
           </span>
         </span>
@@ -530,7 +530,7 @@ export function TalkClient({
         <div>
           <h2>Let&apos;s get ready to talk.</h2>
           {profileChip ? (
-            <p className="mt-3 inline-flex rounded-full bg-sage px-2.5 py-1 text-[13px] text-muted">
+            <p className="mt-3 inline-flex rounded-none bg-sage px-2.5 py-1 font-mono text-[0.6875rem] uppercase tracking-[0.16em] text-muted">
               {profileChip === "ready"
                 ? "Profile read."
                 : profileChip === "failed"
@@ -573,7 +573,7 @@ export function TalkClient({
             <StateLabel>{VOICE_LABEL[voicePhase]}</StateLabel>
           </div>
           {lastAssistant ? (
-            <p className="mt-8 font-display text-[1.25rem] leading-snug">
+            <p className="mt-8 font-display text-[1.75rem] leading-[1.25]">
               {lastAssistant.text}
             </p>
           ) : null}
@@ -720,7 +720,7 @@ export function TalkClient({
                 }
               }}
               rows={3}
-              className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-base"
+              className="w-full rounded-none border border-muted bg-paper px-3 py-2 text-base"
               placeholder="Type your answer"
             />
             <div className="flex flex-col gap-2 sm:flex-row">

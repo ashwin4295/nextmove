@@ -6,13 +6,15 @@ import { useEffect, useState } from "react";
 import { track } from "@/lib/analytics";
 import type { NextMove, Pack, TranscriptTurn } from "@/lib/extract";
 import type { Profile } from "@/lib/profile";
+import { ForkSketch } from "@/components/ForkSketch";
 import {
   Badge,
   Button,
   Card,
   Container,
   Eyebrow,
-  RouteLine,
+  Frame,
+  Rule,
   Wordmark,
 } from "@/lib/ui";
 
@@ -275,14 +277,20 @@ export function NextMoveView({
     : "To: ";
 
   return (
+    <Frame>
     <main className="min-h-full bg-canvas pb-16">
-      <Container className="max-w-[720px] py-8">
-        <Wordmark />
-        <div className="mt-8">
-          <RouteLine variant="result" />
+      <header className="relative h-[220px] w-full overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 text-ink opacity-[0.35]">
+          <ForkSketch cropTop className="h-full w-full" />
         </div>
-        <Eyebrow className="mt-6">YOUR NEXT MOVE</Eyebrow>
-        <h1 className="mt-3">{nextMove.chosenPath.name}</h1>
+        <Container className="relative z-10 flex h-full max-w-[720px] flex-col justify-end pb-6">
+          <Wordmark />
+          <Eyebrow className="mt-4">Your next move</Eyebrow>
+        </Container>
+        <Rule className="absolute inset-x-0 bottom-0" />
+      </header>
+      <Container className="max-w-[720px] py-8">
+        <h1 className="h2 max-w-[16ch]">{nextMove.chosenPath.name}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Badge tone={nextMove.chosenPath.realism} />
         </div>
@@ -291,8 +299,10 @@ export function NextMoveView({
           {TRIGGER_SENTENCE[nextMove.trigger] ?? TRIGGER_SENTENCE.drift}
         </p>
 
-        <Card className="mt-10 p-6">
-          <p className="text-lg font-semibold">What we heard</p>
+        <section className="mt-10">
+          <Rule />
+          <div className="py-6">
+          <p className="font-display text-[1.75rem] leading-[1.25]">What we heard</p>
           {profile ? (
             <p className="mt-2 text-[15px] text-muted">
               From your profile: {profile.headline}
@@ -303,26 +313,23 @@ export function NextMoveView({
           ) : null}
           <div className="mt-5 grid gap-6 sm:grid-cols-2">
             <div>
-              <p className="text-[15px] font-semibold">Moving away from</p>
-              <p className="mt-1 text-[15px] leading-relaxed text-muted">
+              <Eyebrow>Moving away from</Eyebrow>
+              <p className="mt-2 text-[15px] leading-relaxed text-muted">
                 {nextMove.awayFrom}
               </p>
             </div>
             <div>
-              <p className="text-[15px] font-semibold">Moving toward</p>
-              <p className="mt-1 text-[15px] leading-relaxed text-muted">
+              <Eyebrow>Moving toward</Eyebrow>
+              <p className="mt-2 text-[15px] leading-relaxed text-muted">
                 {nextMove.toward}
               </p>
             </div>
           </div>
-          <p className="mt-5 text-[15px] font-semibold">What has to stay true</p>
+          <Eyebrow className="mt-5">What has to stay true</Eyebrow>
           {nextMove.anchors.length > 0 ? (
-            <ul className="mt-3 flex flex-wrap gap-2">
+            <ul className="mt-3 flex flex-col gap-1">
               {nextMove.anchors.map((a) => (
-                <li
-                  key={a}
-                  className="rounded-full bg-sage px-3 py-1 text-[15px] text-ink"
-                >
+                <li key={a} className="text-[15px] text-ink">
                   {a}
                 </li>
               ))}
@@ -330,7 +337,7 @@ export function NextMoveView({
           ) : null}
           <button
             type="button"
-            className="mt-5 min-h-11 text-[15px] font-medium text-ink hover:underline"
+            className="mt-5 min-h-11 font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-ink hover:underline"
             onClick={() => setShowCorrection((v) => !v)}
           >
             That&apos;s not quite right
@@ -341,7 +348,7 @@ export function NextMoveView({
                 value={correction}
                 onChange={(e) => setCorrection(e.target.value)}
                 rows={4}
-                className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-base"
+                className="w-full rounded-none border border-muted bg-paper px-3 py-2 text-base"
                 placeholder="Tell the coach what it got wrong"
               />
               <Button
@@ -356,10 +363,12 @@ export function NextMoveView({
               ) : null}
             </div>
           ) : null}
-        </Card>
+          </div>
+          <Rule />
+        </section>
 
         <Card shadow className="mt-8 p-6">
-          <p className="text-[15px] font-semibold">The first message</p>
+          <Eyebrow>The first message</Eyebrow>
           <p className="mt-3 text-sm font-semibold">{toLine}</p>
           <p className="mt-4 select-text leading-relaxed">{message}</p>
           {!contactName ? (
@@ -368,7 +377,7 @@ export function NextMoveView({
                 value={nameDraft}
                 onChange={(e) => setNameDraft(e.target.value)}
                 placeholder="Who do you know in this world? First name"
-                className="w-full min-h-12 rounded-[10px] border border-line bg-surface px-3 py-2 text-base"
+                className="w-full min-h-12 rounded-none border border-muted bg-paper px-3 py-2 text-base"
               />
               <Button
                 onClick={writeForThem}
@@ -393,39 +402,45 @@ export function NextMoveView({
 
         {nextMove.otherPaths.length > 0 ? (
           <div className="mt-10">
-            <p className="text-lg font-semibold">The other doors</p>
+            <Eyebrow>The other doors</Eyebrow>
             <ul className="mt-4 flex flex-col">
               {nextMove.otherPaths.map((path) => (
-                <li key={path.name} className="border-t border-line py-5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold">{path.name}</p>
+                <li key={path.name} className="border-t border-rule py-5 last:border-b">
+                  <div className="flex flex-wrap items-baseline gap-3">
+                    <p className="font-display text-[1.75rem] leading-[1.25]">
+                      {path.name}
+                    </p>
                     <Badge tone={path.realism} />
                   </div>
-                  <p className="mt-3 text-[15px] font-semibold">Why it may fit</p>
-                  <p className="mt-1 text-[15px] leading-relaxed">
+                  <Eyebrow className="mt-4">Why it may fit</Eyebrow>
+                  <p className="mt-2 text-[15px] leading-relaxed">
                     {path.whyItFits}
                   </p>
-                  <p className="mt-3 text-[15px] font-semibold">
-                    What needs checking
-                  </p>
-                  <p className="mt-1 text-[15px] text-muted">{path.firstGap}</p>
+                  <Eyebrow className="mt-4">What needs checking</Eyebrow>
+                  <p className="mt-2 text-[15px] text-muted">{path.firstGap}</p>
                 </li>
               ))}
             </ul>
           </div>
         ) : null}
 
-        <Card className="mt-8 border-0 bg-sage p-6">
-          <p className="text-lg font-semibold">Your next 30 days</p>
+        <section className="mt-8">
+          <Rule />
+          <div className="py-6">
+          <Eyebrow>Your next 30 days</Eyebrow>
           <p className="mt-3 leading-relaxed">{nextMove.experiment}</p>
           <p className="mt-3 text-[15px] font-medium">
             Decision date: {formatDecisionDate(nextMove.decisionDate)}
           </p>
-        </Card>
+          </div>
+          <Rule />
+        </section>
 
         {/consult|strateg/i.test(nextMove.chosenPath.name) ? (
-          <Card className="mt-6 p-6">
-            <p className="text-lg font-semibold">Consulting is your door.</p>
+          <section className="mt-6">
+            <Rule />
+            <div className="py-6">
+            <p className="font-display text-[1.75rem] leading-[1.25]">Consulting is your door.</p>
             <p className="mt-3 leading-relaxed">
               The gap between wanting it and getting an offer is the case
               interview, and it is trainable. MBB Prep is where the same coach
@@ -441,7 +456,9 @@ export function NextMoveView({
                 See how MBB Prep works
               </Button>
             </div>
-          </Card>
+            </div>
+            <Rule />
+          </section>
         ) : null}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -491,7 +508,7 @@ export function NextMoveView({
               </Button>
             </div>
             <p className="mt-8 text-lg font-semibold">Your two weeks</p>
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-surface">
+            <div className="mt-4 overflow-x-auto rounded-none border border-rule bg-paper">
               <table className="w-full text-sm">
                 <tbody>
                   {pack.plan.map((row) => (
@@ -550,7 +567,7 @@ export function NextMoveView({
                   it, not in a tab you closed.
                 </li>
               </ul>
-              <details className="mt-4 rounded-[10px] border border-line p-4">
+              <details className="mt-4 rounded-none border border-rule p-4">
                 <summary className="cursor-pointer text-[15px] font-semibold">
                   See a sample message
                 </summary>
@@ -614,5 +631,6 @@ export function NextMoveView({
         </details>
       </Container>
     </main>
+    </Frame>
   );
 }

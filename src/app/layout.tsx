@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Source_Serif_4 } from "next/font/google";
+import { Inter, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -13,7 +13,15 @@ const inter = Inter({
 const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
   weight: ["400", "500"],
+  style: ["normal", "italic"],
   variable: "--font-source-serif",
+  display: "swap",
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["500"],
+  variable: "--font-jetbrains",
   display: "swap",
 });
 
@@ -34,7 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${sourceSerif.variable} h-full antialiased`}
+      className={`${inter.variable} ${sourceSerif.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-canvas text-ink font-sans">
         <Providers>{children}</Providers>

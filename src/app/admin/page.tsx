@@ -59,7 +59,7 @@ export default async function AdminPage({
           {counters.map(([name, count]) => (
             <div
               key={name}
-              className="rounded-2xl border border-line bg-surface p-4"
+              className="rounded-none border border-rule bg-paper p-4"
             >
               <p className="text-sm text-muted">{name}</p>
               <p className="text-3xl font-semibold">{count}</p>
@@ -68,7 +68,7 @@ export default async function AdminPage({
         </div>
 
         <Eyebrow className="mt-12">LAST 25 SESSIONS</Eyebrow>
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-surface">
+        <div className="mt-4 overflow-x-auto rounded-none border border-rule bg-paper">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-muted">

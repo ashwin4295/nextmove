@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { rememberSource, track } from "@/lib/analytics";
@@ -7,18 +8,19 @@ import { normalizeLinkedInUrl } from "@/lib/profile";
 import {
   Badge,
   Button,
-  Card,
   Container,
   Eyebrow,
-  RouteLine,
+  Frame,
+  Rule,
   Section,
-  StateLabel,
-  Waveform,
   Wordmark,
 } from "@/lib/ui";
 
 const inputClass =
-  "w-full min-h-12 rounded-[10px] border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-muted";
+  "w-full min-h-12 rounded-none border border-muted bg-paper px-4 py-3 text-base text-ink placeholder:text-muted";
+
+const labelClass =
+  "flex flex-1 flex-col gap-1.5 font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-forest";
 
 function StartForm({ source, id }: { source: string; id?: string }) {
   const router = useRouter();
@@ -125,7 +127,7 @@ function StartForm({ source, id }: { source: string; id?: string }) {
   return (
     <form id={id} className="flex flex-col gap-3" onSubmit={onSubmit}>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <label className="flex flex-1 flex-col gap-1.5 text-[14px] font-medium text-ink">
+        <label className={labelClass}>
           First name
           <input
             required
@@ -136,7 +138,7 @@ function StartForm({ source, id }: { source: string; id?: string }) {
             className={inputClass}
           />
         </label>
-        <label className="flex flex-1 flex-col gap-1.5 text-[14px] font-medium text-ink">
+        <label className={labelClass}>
           Email
           <input
             required
@@ -149,7 +151,7 @@ function StartForm({ source, id }: { source: string; id?: string }) {
           />
         </label>
       </div>
-      <label className="flex flex-col gap-1.5 text-[14px] font-medium text-ink">
+      <label className={labelClass}>
         LinkedIn profile
         <input
           required
@@ -161,8 +163,11 @@ function StartForm({ source, id }: { source: string; id?: string }) {
           className={inputClass}
         />
       </label>
-      <label className="flex flex-col gap-1.5 text-[14px] font-medium text-ink">
-        WhatsApp number <span className="font-normal text-muted">(we WhatsApp you your result)</span>
+      <label className={labelClass}>
+        WhatsApp number{" "}
+        <span className="font-sans text-[0.8125rem] font-normal normal-case tracking-normal text-muted">
+          (we WhatsApp you your result)
+        </span>
         <input
           required
           value={phone}
@@ -184,134 +189,6 @@ function StartForm({ source, id }: { source: string; id?: string }) {
   );
 }
 
-function AccordionMark({ open }: { open: boolean }) {
-  return (
-    <span
-      className="ml-4 inline-flex size-11 shrink-0 items-center justify-center text-xl font-medium text-muted"
-      aria-hidden
-    >
-      {open ? "−" : "+"}
-    </span>
-  );
-}
-
-function HeroScene() {
-  return (
-    <Card shadow className="p-5 md:p-6">
-      <p className="mb-5 inline-flex rounded-full bg-sage px-2.5 py-1 text-[13px] font-medium text-muted">
-        Illustrative example
-      </p>
-      <div className="flex gap-3 sm:gap-4">
-        <div className="w-8 shrink-0 self-stretch">
-          <RouteLine variant="hero" />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-6 text-[15px] leading-relaxed">
-          <div>
-            <div className="flex items-start gap-3">
-              <Waveform state="idle" />
-              <p className="font-medium">
-                Priya, 8 years in customer operations
-              </p>
-            </div>
-            <p className="mt-2 font-display text-[1.05rem] leading-snug">
-              I like improving how things work. Lately I&apos;m only reporting
-              on dashboards.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {["Wants ownership", "Needs income stability", "Enjoys improving systems"].map(
-              (chip) => (
-                <span
-                  key={chip}
-                  className="rounded-full bg-sage px-3 py-1 text-[15px] text-ink"
-                >
-                  {chip}
-                </span>
-              ),
-            )}
-          </div>
-          <div>
-            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
-              Next move
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <p className="font-semibold">Business operations</p>
-              <Badge tone="realistic" />
-            </div>
-            <p className="mt-2 text-muted">
-              Builds on your systems experience. The broader scope and the
-              day-to-day still need testing.
-            </p>
-            <p className="mt-3 text-[15px] text-ink">
-              First message → to Meera, ex-colleague now in business ops
-            </p>
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-const RECOGNISE = [
-  {
-    q: "I'm doing well. I'm not sure I want more of this.",
-    a: "The conversation starts with what changed, not with job titles. Doing well and wanting out is a real signal, not ingratitude.",
-  },
-  {
-    q: "I want a change without starting from zero.",
-    a: "Most good moves are adjacent. The coach looks for the door that reuses what you already know.",
-  },
-  {
-    q: "I can see several paths. I don't know which fits.",
-    a: "You will be asked which one pulls you, and then what you would give up. That is usually where the answer is.",
-  },
-  {
-    q: "I'm not sure I need a new role, or a different way to work.",
-    a: "Staying and reshaping the role is one of the doors, and the coach will say so if that is the honest read.",
-  },
-];
-
-function Recognise() {
-  const [open, setOpen] = useState(0);
-
-  return (
-    <div>
-      {RECOGNISE.map((item, i) => {
-        const isOpen = open === i;
-        return (
-          <details
-            key={item.q}
-            open={isOpen}
-            className="border-t border-line last:border-b"
-            onToggle={(e) => {
-              e.preventDefault();
-            }}
-          >
-            <summary
-              className="flex cursor-pointer items-center justify-between gap-4 py-5 text-left font-semibold"
-              onClick={(e) => {
-                e.preventDefault();
-                setOpen(isOpen ? -1 : i);
-              }}
-            >
-              <span>{item.q}</span>
-              <AccordionMark open={isOpen} />
-            </summary>
-            {isOpen ? (
-              <div className="pb-5">
-                <p className="max-w-[62ch] text-muted">{item.a}</p>
-                <Button variant="ghost" href="#start" className="mt-3 px-0">
-                  Start here
-                </Button>
-              </div>
-            ) : null}
-          </details>
-        );
-      })}
-    </div>
-  );
-}
-
 const HOW_STAGES = [
   {
     label: "Tell your story",
@@ -329,163 +206,6 @@ const HOW_STAGES = [
 
 const MEERA_MESSAGE =
   "Hi Meera, I have been in customer operations for eight years and lately I am only reporting on dashboards. I want to move into business operations, and you are the person I know who already did. Could I get twenty minutes to ask what the week actually looks like? Completely fine if this month is too full.";
-
-function StoryCanvas() {
-  return (
-    <div className="flex h-full flex-col justify-between text-[15px]">
-      <div>
-        <div className="flex items-center gap-3">
-          <Waveform state="idle" />
-          <StateLabel>Listening</StateLabel>
-        </div>
-        <p className="mt-5 font-display text-xl leading-snug">
-          What&apos;s prompting this now? What changed in the last six months?
-        </p>
-        <div className="mt-5 flex flex-col gap-3 text-muted">
-          <p>
-            <span className="font-semibold text-ink">Priya: </span>
-            I like improving how things work. Lately I&apos;m only reporting on
-            dashboards.
-          </p>
-          <p>
-            <span className="font-semibold text-ink">Priya: </span>
-            I still need the income to stay stable. I just want ownership of
-            the system, not another report.
-          </p>
-        </div>
-      </div>
-      <div className="mt-6 flex flex-wrap gap-2 text-[15px] font-medium text-ink">
-        <span className="rounded-[10px] border border-line px-4 py-2">Mute</span>
-        <span className="rounded-[10px] border border-line px-4 py-2">End</span>
-        <span className="px-2 py-2 underline-offset-2">Switch to text</span>
-      </div>
-    </div>
-  );
-}
-
-function DoorsCanvas() {
-  const rows: {
-    name: string;
-    tone: "realistic" | "strong fit" | "a stretch";
-    why: string;
-    check: string;
-  }[] = [
-    {
-      name: "Business operations",
-      tone: "realistic",
-      why: "Builds on your systems experience and the ownership you want.",
-      check: "The broader scope and the day-to-day still need testing.",
-    },
-    {
-      name: "Customer operations elsewhere",
-      tone: "strong fit",
-      why: "Same craft, with more room to improve how things work.",
-      check: "Whether a new team gives you ownership, not another dashboard.",
-    },
-    {
-      name: "Product management",
-      tone: "a stretch",
-      why: "You like improving systems. Product sits next to that craft.",
-      check: "You have not done the role, and the income floor has to stay true.",
-    },
-  ];
-  return (
-    <div className="flex h-full flex-col justify-center gap-4 text-[15px]">
-      {rows.map((row) => (
-        <div key={row.name} className="border-b border-line pb-4 last:border-0 last:pb-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold">{row.name}</p>
-            <Badge tone={row.tone} />
-          </div>
-          <p className="mt-1">{row.why}</p>
-          <p className="mt-1 text-muted">
-            <span className="font-medium text-ink">What needs checking. </span>
-            {row.check}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function StepCanvas() {
-  return (
-    <div className="flex h-full flex-col justify-center">
-      <Card shadow className="p-5">
-        <p className="text-[15px] font-semibold">To: Meera · ex-colleague</p>
-        <p className="mt-3 text-[15px] leading-relaxed">{MEERA_MESSAGE}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="inline-flex h-[44px] items-center rounded-[10px] bg-forest px-4 text-[15px] font-semibold text-white">
-            Copy message
-          </span>
-          <span className="inline-flex h-[44px] items-center rounded-[10px] border border-line px-4 text-[15px] font-semibold">
-            I sent it
-          </span>
-        </div>
-      </Card>
-      <p className="mt-4 text-[15px] font-medium">Decision date: 15 October</p>
-    </div>
-  );
-}
-
-function HowCanvas({ stage }: { stage: number }) {
-  const panels = [<StoryCanvas key="0" />, <DoorsCanvas key="1" />, <StepCanvas key="2" />];
-  return (
-    <Card className="min-h-[260px] p-6 md:p-8">
-      <div className="scene-fade h-full">{panels[stage]}</div>
-    </Card>
-  );
-}
-
-function HowItWorks() {
-  const [stage, setStage] = useState(0);
-
-  return (
-    <>
-      <div className="hidden md:block">
-        <div className="grid grid-cols-3 gap-6">
-          {HOW_STAGES.map((item, i) => {
-            const selected = stage === i;
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => setStage(i)}
-                className="min-h-11 rounded-[10px] text-left"
-              >
-                <span
-                  className={`mb-3 block h-1 w-10 rounded-full ${selected ? "bg-forest" : "bg-line"}`}
-                />
-                <p className={`text-[15px] ${selected ? "font-semibold" : "font-medium"}`}>
-                  <span className="text-muted">{i + 1}. </span>
-                  {item.label}
-                </p>
-                <p className="mt-1 text-[15px] text-muted">{item.line}</p>
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-8">
-          <HowCanvas stage={stage} />
-        </div>
-      </div>
-      <div className="flex flex-col gap-8 md:hidden">
-        {HOW_STAGES.map((item, i) => (
-          <div key={item.label}>
-            <p className="text-[15px] font-semibold">
-              <span className="text-muted">{i + 1}. </span>
-              {item.label}
-            </p>
-            <p className="mt-1 text-[15px] text-muted">{item.line}</p>
-            <div className="mt-4">
-              <HowCanvas stage={i} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
 
 const BRIEF_OPTIONS: {
   name: string;
@@ -523,74 +243,76 @@ const BRIEF_OPTIONS: {
 
 function ResultBrief() {
   return (
-    <Card className="p-6 md:p-8">
-      <p className="inline-flex rounded-full bg-sage px-3 py-1 text-[13px] font-medium text-muted">
+    <div className="border border-[var(--rule)]">
+      <p className="px-5 py-4 font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-forest md:px-8">
         Illustrative brief · Priya, 8 years in customer operations
       </p>
-      <h3 className="mt-6 text-lg font-semibold">What we heard</h3>
-      <div className="mt-4 grid gap-6 md:grid-cols-2">
-        <div>
-          <p className="text-[15px] font-semibold">Moving away from</p>
-          <p className="mt-1 text-[15px] text-muted">
-            Only reporting on dashboards, with little ownership of how things
-            work.
-          </p>
+      <Rule />
+      <div className="px-5 py-6 md:px-8">
+        <h3 className="font-display text-[1.75rem] font-normal leading-[1.25]">
+          What we heard
+        </h3>
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <div>
+            <Eyebrow>Moving away from</Eyebrow>
+            <p className="mt-2 text-[15px] text-muted">
+              Only reporting on dashboards, with little ownership of how things
+              work.
+            </p>
+          </div>
+          <div>
+            <Eyebrow>Moving toward</Eyebrow>
+            <p className="mt-2 text-[15px] text-muted">
+              Broader operations work that lets her improve the system, not just
+              describe it.
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-[15px] font-semibold">Moving toward</p>
-          <p className="mt-1 text-[15px] text-muted">
-            Broader operations work that lets her improve the system, not just
-            describe it.
-          </p>
-        </div>
+        <Eyebrow className="mt-6">What has to stay true</Eyebrow>
+        <p className="mt-2 text-[15px] text-muted">
+          Income stability · Ownership · Improving systems
+        </p>
       </div>
-      <p className="mt-5 text-[15px] font-semibold">What has to stay true</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {["Income stability", "Ownership", "Improving systems"].map((chip) => (
-          <span
-            key={chip}
-            className="rounded-full bg-sage px-3 py-1 text-[15px]"
-          >
-            {chip}
-          </span>
-        ))}
-      </div>
-      <div className="mt-8 flex flex-col gap-6">
-        {BRIEF_OPTIONS.map((opt) => (
-          <div key={opt.name} className="border-t border-line pt-6">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="font-semibold">{opt.name}</p>
+      {BRIEF_OPTIONS.map((opt) => (
+        <div key={opt.name}>
+          <Rule />
+          <div className="px-5 py-6 md:px-8">
+            <div className="flex flex-wrap items-baseline gap-3">
+              <p className="font-display text-[1.75rem] font-normal leading-[1.25]">
+                {opt.name}
+              </p>
               <Badge tone={opt.tone} />
             </div>
-            <div className="mt-3 grid gap-3 text-[15px] md:grid-cols-2">
+            <div className="mt-4 grid gap-4 text-[15px] md:grid-cols-2">
               <div>
-                <p className="font-semibold">Why it may fit</p>
-                <p className="mt-1 text-muted">{opt.why}</p>
+                <Eyebrow>Why it may fit</Eyebrow>
+                <p className="mt-2 text-muted">{opt.why}</p>
               </div>
               <div>
-                <p className="font-semibold">What needs checking</p>
-                <p className="mt-1 text-muted">{opt.check}</p>
+                <Eyebrow>What needs checking</Eyebrow>
+                <p className="mt-2 text-muted">{opt.check}</p>
               </div>
               <div>
-                <p className="font-semibold">The trade-off</p>
-                <p className="mt-1 text-muted">{opt.trade}</p>
+                <Eyebrow>The trade-off</Eyebrow>
+                <p className="mt-2 text-muted">{opt.trade}</p>
               </div>
               <div>
-                <p className="font-semibold">One low-risk test</p>
-                <p className="mt-1 text-muted">{opt.test}</p>
+                <Eyebrow>One low-risk test</Eyebrow>
+                <p className="mt-2 text-muted">{opt.test}</p>
               </div>
             </div>
           </div>
-        ))}
-      </div>
-      <div className="mt-8 border-t border-line pt-6">
-        <p className="font-semibold">First message → Meera</p>
+        </div>
+      ))}
+      <Rule />
+      <div className="px-5 py-6 md:px-8">
+        <Eyebrow>First message → Meera</Eyebrow>
         <p className="mt-3 text-[15px] leading-relaxed">{MEERA_MESSAGE}</p>
         <p className="mt-3 text-[15px] text-muted">
           You decide whether to send it. Nothing is sent for you.
         </p>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -629,17 +351,20 @@ function FaqList() {
   return (
     <div>
       {FAQ.map((item) => (
-        <details key={item.q} className="group border-t border-line last:border-b">
-          <summary className="flex cursor-pointer items-center justify-between gap-4 py-5 text-left font-semibold">
-            <span>{item.q}</span>
+        <details key={item.q} className="group">
+          <Rule />
+          <summary className="flex cursor-pointer items-center justify-between gap-4 py-5 text-left">
+            <span className="font-display text-[1.25rem] leading-snug">
+              {item.q}
+            </span>
             <span
-              className="ml-4 inline-flex size-11 shrink-0 items-center justify-center text-xl font-medium text-muted group-open:hidden"
+              className="ml-4 inline-flex size-11 shrink-0 items-center justify-center font-mono text-lg font-medium text-muted group-open:hidden"
               aria-hidden
             >
               +
             </span>
             <span
-              className="ml-4 hidden size-11 shrink-0 items-center justify-center text-xl font-medium text-muted group-open:inline-flex"
+              className="ml-4 hidden size-11 shrink-0 items-center justify-center font-mono text-lg font-medium text-muted group-open:inline-flex"
               aria-hidden
             >
               −
@@ -648,20 +373,69 @@ function FaqList() {
           <p className="max-w-[62ch] pb-5 text-muted">{item.a}</p>
         </details>
       ))}
+      <Rule />
     </div>
   );
 }
 
 function TrustRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="border-t border-white/20 py-4 first:border-t-0 first:pt-0 last:pb-0">
-      <p className="text-[15px] font-semibold text-white">{label}</p>
-      <p className="mt-1 text-[15px] text-white/80">{children}</p>
+    <div className="border-t border-[var(--rule)] py-4 first:border-t-0 first:pt-0 last:pb-0">
+      <Eyebrow>{label}</Eyebrow>
+      <p className="mt-2 text-[15px] text-muted">{children}</p>
     </div>
   );
 }
 
-export function Landing({ source }: { source: string }) {
+const PROBLEM_ROWS = [
+  {
+    n: "01 · Recruiter",
+    quote: "\"You'd be great for this.\"",
+    note: "Fit for them is not fit for you.",
+  },
+  {
+    n: "02 · Friend",
+    quote: "\"Just go for it.\"",
+    note: "Encouragement is not evidence.",
+  },
+  {
+    n: "03 · Quiz",
+    quote: "\"You're an Explorer type.\"",
+    note: "A label is not a next step.",
+  },
+];
+
+const LEAVE_WITH = [
+  {
+    eyebrow: "For the undecided",
+    head: "Know which door fits before you tell anyone.",
+    body: "Two or three doors, one graded above the rest, in your own words. At least one will be marked a stretch or a long shot when the evidence says so.",
+  },
+  {
+    eyebrow: "For the almost-sure",
+    head: "Know how real your shot is.",
+    body: "Not a percentage. A word: strong fit, realistic, a stretch, long shot. And the one thing that would sink it.",
+  },
+  {
+    eyebrow: "For the stuck",
+    head: "Send the first message tonight.",
+    body: "To a person you already know in that world, drafted from what you said. You copy it. You send it. Nothing is sent for you.",
+  },
+];
+
+const NAV_LINKS = [
+  { href: "#how", label: "How it works" },
+  { href: "#example", label: "See an example" },
+  { href: "#faq", label: "FAQ" },
+];
+
+export function Landing({
+  source,
+  heroArt,
+}: {
+  source: string;
+  heroArt: ReactNode;
+}) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -678,166 +452,268 @@ export function Landing({ source }: { source: string }) {
   }, []);
 
   return (
-    <div className="min-h-full bg-canvas">
-      <header
-        className={`sticky top-0 z-20 bg-canvas ${scrolled ? "border-b border-line" : ""}`}
-      >
-        <Container className="flex items-center justify-between gap-3 py-3">
-          <a href="#start" className="inline-flex min-h-11 shrink-0 items-center" aria-label="NextMove">
-            <Wordmark />
-          </a>
-          <nav className="hidden items-center gap-8 text-[15px] font-medium text-ink md:flex">
-            <a href="#how" className="inline-flex min-h-11 items-center hover:underline">
-              How it works
+    <Frame>
+      <div className="min-h-full bg-canvas">
+        <header className="sticky top-0 z-20 h-16 bg-canvas">
+          <Container className="relative flex h-16 items-center justify-between gap-3">
+            <a
+              href="#start"
+              className="inline-flex min-h-11 shrink-0 items-center"
+              aria-label="NextMove"
+            >
+              <Wordmark />
             </a>
-            <a href="#example" className="inline-flex min-h-11 items-center hover:underline">
-              See an example
-            </a>
-          </nav>
-          <Button href="#start" className="shrink-0 px-4 md:px-6">
-            Start a conversation
-          </Button>
-        </Container>
-      </header>
+            <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 md:flex">
+              {NAV_LINKS.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="inline-flex min-h-11 items-center font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-ink hover:underline"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+            <Button
+              href="#start"
+              className="shrink-0 !gap-2 !px-2 !text-[0.625rem] !tracking-[0.08em] min-[400px]:!gap-4 min-[400px]:!px-3 min-[400px]:!text-[0.75rem] min-[400px]:!tracking-[0.12em] md:!px-6"
+            >
+              Start a conversation
+            </Button>
+          </Container>
+          {scrolled ? <Rule /> : null}
+        </header>
 
-      <Section id="start">
-        <div className="grid items-center gap-12 md:grid-cols-12 md:gap-6">
-          <div className="min-w-0 md:col-span-5">
-            <Eyebrow>A CAREER CONVERSATION, BUILT AROUND YOU</Eyebrow>
-            <h1 className="mt-4">You&apos;ve come this far. What comes next?</h1>
-            <p className="mt-5 max-w-[46ch]">
-              Talk it through with an AI coach for about ten minutes. It asks
-              what a good coach asks, tells you which door actually fits and how
-              real your shot is, and writes the first message to someone you
-              already know in that world.
-            </p>
-            <div className="mt-8">
-              <StartForm source={source} />
+        <Section id="start">
+          <div className="grid items-center gap-12 md:grid-cols-12 md:gap-6">
+            <div className="min-w-0 md:col-span-6">
+              <Eyebrow>For professionals 4 to 15 years in · India</Eyebrow>
+              <h1 className="hero-h1 mt-4">
+                <span>You&apos;ve come</span>
+                <span className="md:hidden"> </span>
+                <br />
+                <span>this far.</span>
+                <span className="md:hidden"> </span>
+                <br />
+                <span>What comes</span>
+                <span className="md:hidden"> </span>
+                <br />
+                <span>next?</span>
+              </h1>
+              <p className="mt-5 max-w-[46ch] text-[1.25rem] leading-[1.5]">
+                Talk it through with an AI coach for about ten minutes. It tells
+                you which door fits, how real your shot is, and writes the first
+                message to someone you already know in that world.
+              </p>
+              <div className="mt-8">
+                <StartForm source={source} />
+              </div>
+              <p className="mt-4 text-[15px] text-muted">
+                About ten minutes · Voice or text · Try for free till September 6
+              </p>
+              <p className="mt-1 text-[15px] text-muted">
+                The coach reads your public LinkedIn profile and skips the
+                basics. We never post, connect, or message anyone.
+              </p>
             </div>
-            <p className="mt-4 text-[15px] text-muted">
-              About ten minutes · Voice or text · Try for free till September 6
-            </p>
-            <p className="mt-1 text-[15px] text-muted">
-              The coach reads your public LinkedIn profile and skips the
-              basics. We never post, connect, or message anyone.
-            </p>
+            <div className="min-w-0 md:col-span-6">
+              <div className="card-shadow border border-[var(--rule)] bg-paper p-6">
+                <div className="text-ink">{heroArt}</div>
+                <p className="mt-4 font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-forest">
+                  Fig. 01 · Three doors, one path
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="min-w-0 md:col-span-7">
-            <HeroScene />
-          </div>
-        </div>
-      </Section>
+        </Section>
 
-      <Section id="recognise">
-        <div className="grid gap-10 md:grid-cols-12 md:gap-6">
-          <div className="md:col-span-4">
-            <h2>You don&apos;t need a perfect plan to begin.</h2>
+        <Section id="problem">
+          <div className="grid gap-10 md:grid-cols-12 md:gap-6">
+            <div className="md:col-span-5">
+              <h2>
+                Every career
+                <br /> decision begins with
+                <br /> someone else&apos;s word.
+              </h2>
+            </div>
+            <div className="md:col-span-7">
+              <p className="border-b border-[var(--rule)] pb-5 font-display text-[1.75rem] leading-[1.25]">
+                A recruiter gives you a role.
+              </p>
+              <p className="border-b border-[var(--rule)] py-5 font-display text-[1.75rem] leading-[1.25]">
+                A friend gives you an opinion.
+              </p>
+              <p className="border-b border-[var(--rule)] py-5 font-display text-[1.75rem] leading-[1.25]">
+                A quiz gives you a label.
+              </p>
+              <p className="pt-5 font-display text-[1.75rem] leading-[1.25] text-forest">
+                None of them has to tell you which door actually fits, or what
+                would sink it.
+              </p>
+            </div>
           </div>
-          <div className="md:col-span-8">
-            <Recognise />
+          <div className="mt-12 grid gap-0 border-t border-[var(--rule)] md:grid-cols-3">
+            {PROBLEM_ROWS.map((row, i) => (
+              <div
+                key={row.n}
+                className={`py-6 md:px-6 md:py-8 ${i > 0 ? "border-t border-[var(--rule)] md:border-t-0 md:border-l" : ""}`}
+              >
+                <Eyebrow>{row.n}</Eyebrow>
+                <p className="mt-4 font-display text-[1.75rem] leading-[1.25]">
+                  {row.quote}
+                </p>
+                <p className="mt-3 text-[15px] text-muted">{row.note}</p>
+              </div>
+            ))}
           </div>
-        </div>
-      </Section>
+        </Section>
 
-      <Section id="how" tone="sage">
-        <h2>From your story to a door worth walking through.</h2>
-        <div className="mt-10">
-          <HowItWorks />
-        </div>
-      </Section>
+        <Section id="leave" tone="forest">
+          <Eyebrow className="text-canvas">What you leave with</Eyebrow>
+          <h2 className="mt-4 max-w-[18ch] text-canvas">
+            One door. Graded honestly.{" "}
+            <em className="italic">The first message written.</em>
+          </h2>
+          <div className="mt-12 grid gap-0 border-t border-[var(--rule)] md:grid-cols-3">
+            {LEAVE_WITH.map((col, i) => (
+              <div
+                key={col.eyebrow}
+                className={`py-6 md:px-6 md:py-8 ${i > 0 ? "border-t border-[var(--rule)] md:border-t-0 md:border-l" : ""}`}
+              >
+                <Eyebrow className="text-canvas">{col.eyebrow}</Eyebrow>
+                <p className="mt-4 font-display text-[1.75rem] leading-[1.25] text-canvas">
+                  {col.head}
+                </p>
+                <p className="mt-3 text-[15px] text-muted">{col.body}</p>
+                <a
+                  href="#example"
+                  className="mt-5 inline-flex min-h-11 items-center font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-canvas hover:underline"
+                >
+                  See an example →
+                </a>
+              </div>
+            ))}
+          </div>
+        </Section>
 
-      <Section id="example">
-        <h2>A clearer direction. With the reasoning behind it.</h2>
-        <p className="mt-5 max-w-[68ch]">
-          Career advice is either free and generic or $200-$300 an hour. The
-          first conversation is what actually moves people. NextMove tells you
-          which door, why, and who to talk to first.
-        </p>
-        <div className="mt-10">
-          <ResultBrief />
-        </div>
-      </Section>
-
-      <Section id="trust" tone="forest">
-        <div className="grid gap-10 md:grid-cols-12 md:gap-6">
-          <div className="md:col-span-5">
-            <h2 className="text-white">Know what happens to your story.</h2>
-          </div>
-          <div className="md:col-span-7">
-            <TrustRow label="Audio">
-              Not stored. Your voice is processed live to make the conversation
-              work and is not kept by NextMove.
-            </TrustRow>
-            <TrustRow label="Transcript">
-              Stored, so your result page and your message keep working.
-              Processed by the AI providers that run the coach; not used to
-              train them by us.
-            </TrustRow>
-            <TrustRow label="Sharing">
-              Your result page is private unless you share the link. Anything
-              you ask to keep private never appears on the shareable card.
-            </TrustRow>
-            <TrustRow label="Sending">
-              Nothing is sent for you. You copy the message and decide.
-            </TrustRow>
-            <a
-              href="#faq"
-              className="mt-4 inline-flex min-h-11 items-center text-[15px] text-white underline-offset-2 hover:underline"
-            >
-              How this works in detail
-            </a>
-          </div>
-        </div>
-      </Section>
-
-      <Section id="faq">
-        <div className="grid gap-10 md:grid-cols-12 md:gap-6">
-          <div className="md:col-span-4">
-            <h2>Questions people ask first.</h2>
-          </div>
-          <div className="md:col-span-8">
-            <FaqList />
-          </div>
-        </div>
-      </Section>
-
-      <Section id="close">
-        <div className="mx-auto max-w-[720px] text-center">
-          <h2>Your next move starts with a conversation.</h2>
-          <p className="mt-4 text-muted">
-            You don&apos;t need to have the answer before you begin.
-          </p>
-          <div className="mt-8 flex justify-center">
-            <Button href="#start">Start a conversation</Button>
-          </div>
-          <p className="mt-4 text-[15px] text-muted">Prefer to type? You can.</p>
+        <Section id="how">
+          <Eyebrow>How it works</Eyebrow>
+          <h2 className="mt-4 max-w-none">
+            Ten minutes. Three parts. One move.
+          </h2>
           <div className="mt-10">
-            <RouteLine variant="closing" />
+            {HOW_STAGES.map((item, i) => (
+              <div
+                key={item.label}
+                className="grid gap-3 border-t border-[var(--rule)] py-8 last:border-b md:grid-cols-12 md:items-baseline"
+              >
+                <p className="font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-forest md:col-span-2">
+                  {String(i + 1).padStart(2, "0")}
+                </p>
+                <p className="font-display text-[1.75rem] leading-[1.25] md:col-span-4">
+                  {item.label}
+                </p>
+                <p className="text-[15px] text-muted md:col-span-6">
+                  {item.line}
+                </p>
+              </div>
+            ))}
           </div>
-        </div>
-      </Section>
+        </Section>
 
-      <footer className="border-t border-line py-8">
-        <Container className="flex flex-col gap-4 text-[15px] text-muted md:flex-row md:items-center md:justify-between">
-          <a href="/" className="inline-flex min-h-11 items-center" aria-label="NextMove home">
-            <Wordmark />
-          </a>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <a href="/privacy" className="inline-flex min-h-11 items-center px-3 hover:text-ink hover:underline">
-              Privacy
-            </a>
-            <a href="/terms" className="inline-flex min-h-11 items-center px-3 hover:text-ink hover:underline">
-              Terms
-            </a>
-            <a
-              href="https://github.com/ashwin4295/nextmove"
-              className="inline-flex min-h-11 items-center px-3 hover:text-ink hover:underline"
-            >
-              GitHub
-            </a>
+        <Section id="example">
+          <Eyebrow>An example, illustrative</Eyebrow>
+          <h2 className="mt-4 max-w-[16ch]">
+            A clearer direction. With the reasoning behind it.
+          </h2>
+          <div className="mt-10">
+            <ResultBrief />
           </div>
-        </Container>
-      </footer>
-    </div>
+        </Section>
+
+        <Section id="trust" tone="sage">
+          <div className="grid gap-10 md:grid-cols-12 md:gap-6">
+            <div className="md:col-span-5">
+              <h2>Know what happens to your story.</h2>
+            </div>
+            <div className="md:col-span-7">
+              <TrustRow label="Audio">
+                Not stored. Your voice is processed live to make the conversation
+                work and is not kept by NextMove.
+              </TrustRow>
+              <TrustRow label="Transcript">
+                Stored, so your result page and your message keep working.
+                Processed by the AI providers that run the coach; not used to
+                train them by us.
+              </TrustRow>
+              <TrustRow label="Sharing">
+                Your result page is private unless you share the link. Anything
+                you ask to keep private never appears on the shareable card.
+              </TrustRow>
+              <TrustRow label="Sending">
+                Nothing is sent for you. You copy the message and decide.
+              </TrustRow>
+            </div>
+          </div>
+        </Section>
+
+        <Section id="faq">
+          <div className="grid gap-10 md:grid-cols-12 md:gap-6">
+            <div className="md:col-span-4">
+              <h2>Questions people ask first.</h2>
+            </div>
+            <div className="md:col-span-8">
+              <FaqList />
+            </div>
+          </div>
+        </Section>
+
+        <Section id="close">
+          <div className="mx-auto max-w-[720px] text-center">
+            <h2 className="mx-auto max-w-none">
+              Your next move
+              <br /> starts with
+              <br /> a conversation.
+              <br /> Not a plan.
+            </h2>
+            <div className="mt-8 flex justify-center">
+              <Button href="#start">Start a conversation</Button>
+            </div>
+          </div>
+        </Section>
+
+        <footer className="py-8">
+          <Container className="flex flex-col gap-4 text-muted md:flex-row md:items-center md:justify-between">
+            <Link
+              href="/"
+              className="inline-flex min-h-11 items-center"
+              aria-label="NextMove home"
+            >
+              <Wordmark />
+            </Link>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <a
+                href="/privacy"
+                className="inline-flex min-h-11 items-center px-3 font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] hover:text-ink hover:underline"
+              >
+                Privacy
+              </a>
+              <a
+                href="/terms"
+                className="inline-flex min-h-11 items-center px-3 font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] hover:text-ink hover:underline"
+              >
+                Terms
+              </a>
+              <a
+                href="https://github.com/ashwin4295/nextmove"
+                className="inline-flex min-h-11 items-center px-3 font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] hover:text-ink hover:underline"
+              >
+                GitHub
+              </a>
+            </div>
+          </Container>
+        </footer>
+      </div>
+    </Frame>
   );
 }
