@@ -47,7 +47,7 @@ body {
   .h1 {
     font-family: var(--font-source-serif), ui-serif, Georgia, serif;
     font-weight: 400;
-    font-size: clamp(3.25rem, 7vw, 6rem);
+    font-size: clamp(3.25rem, 6.2vw, 5.5rem);
     line-height: 0.98;
     letter-spacing: -0.02em;
     max-width: 12ch;
