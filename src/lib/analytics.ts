@@ -26,12 +26,13 @@ export function storedSource(): string {
 
 export function track(
   event: string,
-  props: { session_id?: string; source?: string } = {},
+  props: { session_id?: string; source?: string; score?: number } = {},
 ) {
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
   posthog.capture(event, {
     session_id: props.session_id,
     source: props.source || storedSource(),
+    ...(typeof props.score === "number" ? { score: props.score } : {}),
   });
 }
 

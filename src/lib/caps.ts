@@ -1,6 +1,7 @@
 export type Caps = {
   emailStarted: number;
   todayStarted: number;
+  pilotStarted: number;
 };
 
 export function envCap(name: string, fallback: number): number {
@@ -15,7 +16,8 @@ export function utcDayStart(ts: number) {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
-export function capsExceeded(caps: Caps, kind: "email" | "daily") {
+export function capsExceeded(caps: Caps, kind: "email" | "daily" | "pilot") {
   if (kind === "email") return caps.emailStarted >= envCap("PER_EMAIL_CAP", 1);
+  if (kind === "pilot") return caps.pilotStarted >= envCap("PILOT_CAP", 50);
   return caps.todayStarted >= envCap("DAILY_CAP", 60);
 }

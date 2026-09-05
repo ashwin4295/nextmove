@@ -22,7 +22,84 @@ const inputClass =
 const labelClass =
   "flex flex-1 flex-col gap-1.5 font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-forest";
 
-function StartForm({ source, id }: { source: string; id?: string }) {
+function ClosedPlate({ source }: { source: string }) {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), source }),
+      });
+      if (!res.ok) throw new Error("fail");
+      track("waitlist_joined", { source });
+      setDone(true);
+    } catch {
+      setError("Something went wrong. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-none border border-rule bg-paper p-6">
+      <Eyebrow>PILOT CLOSED</Eyebrow>
+      <p className="mt-3 font-display text-[1.75rem] leading-[1.25]">
+        The first fifty conversations are taken.
+      </p>
+      <p className="mt-4 text-[1.0625rem] leading-relaxed">
+        We opened NextMove to fifty people to learn what a ten-minute coaching
+        conversation should be. Those seats are full. Leave your email and we
+        will write to you if we open the next fifty.
+      </p>
+      {done ? (
+        <p className="mt-6 text-[1.0625rem] leading-relaxed">
+          Noted. We will write to you first.
+        </p>
+      ) : (
+        <form
+          className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end"
+          onSubmit={onSubmit}
+        >
+          <label className={labelClass}>
+            EMAIL
+            <input
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              className={inputClass}
+            />
+          </label>
+          <Button type="submit" variant="secondary" disabled={busy}>
+            KEEP ME POSTED →
+          </Button>
+        </form>
+      )}
+      {error && !done ? (
+        <p className="mt-3 text-[1.0625rem] leading-relaxed">{error}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function StartForm({
+  source,
+  id,
+  onPilotFull,
+}: {
+  source: string;
+  id?: string;
+  onPilotFull: () => void;
+}) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -82,6 +159,11 @@ function StartForm({ source, id }: { source: string; id?: string }) {
         id?: string;
         error?: string;
       };
+      if (data.error === "pilot_full") {
+        onPilotFull();
+        setBusy(false);
+        return;
+      }
       if (data.error === "email_cap") {
         setCapMessage(
           "You've already had your free conversation. Your result page has everything from it. Reply to your result email if you need it again.",
@@ -437,10 +519,22 @@ export function Landing({
   heroArt: ReactNode;
 }) {
   const [scrolled, setScrolled] = useState(false);
+  const [pilotFull, setPilotFull] = useState(false);
 
   useEffect(() => {
     if (source) rememberSource(source);
   }, [source]);
+
+  useEffect(() => {
+    fetch("/api/pilot")
+      .then((r) => r.json())
+      .then((data: { full?: boolean }) => {
+        if (data.full === true) setPilotFull(true);
+      })
+      .catch(() => {
+        // keep the form while the check fails
+      });
+  }, []);
 
   useEffect(() => {
     function onScroll() {
@@ -505,15 +599,27 @@ export function Landing({
                 message to someone you already know in that world.
               </p>
               <div className="mt-8">
-                <StartForm source={source} />
+                {pilotFull ? (
+                  <ClosedPlate source={source} />
+                ) : (
+                  <StartForm
+                    source={source}
+                    onPilotFull={() => setPilotFull(true)}
+                  />
+                )}
               </div>
-              <p className="mt-4 text-[15px] text-muted">
-                About ten minutes · Voice or text · Try for free till September 6
-              </p>
-              <p className="mt-1 text-[15px] text-muted">
-                The coach reads your public LinkedIn profile and skips the
-                basics. We never post, connect, or message anyone.
-              </p>
+              {pilotFull ? null : (
+                <>
+                  <p className="mt-4 text-[15px] text-muted">
+                    About ten minutes · Voice or text · Try for free till
+                    September 6
+                  </p>
+                  <p className="mt-1 text-[15px] text-muted">
+                    The coach reads your public LinkedIn profile and skips the
+                    basics. We never post, connect, or message anyone.
+                  </p>
+                </>
+              )}
             </div>
             <div className="min-w-0 md:col-span-6">
               <div className="card-shadow border border-[var(--rule)] bg-paper p-6">

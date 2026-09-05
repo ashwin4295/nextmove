@@ -174,6 +174,8 @@ export const get = queryGeneric({
       startedAt: row.startedAt ?? null,
       pack: row.pack ?? null,
       packFailed: row.packFailed === true,
+      feedbackScore: row.feedbackScore,
+      feedbackText: row.feedbackText,
     };
   },
 });
@@ -245,7 +247,48 @@ export const caps = queryGeneric({
       (r) => typeof r.startedAt === "number",
     ).length;
 
-    return { emailStarted, todayStarted };
+    const startedRows = await ctx.db
+      .query("sessions")
+      .withIndex("by_startedAt", (q) => q.gte("startedAt", 0))
+      .collect();
+    const pilotStarted = startedRows.filter(
+      (r) => typeof r.startedAt === "number",
+    ).length;
+
+    return { emailStarted, todayStarted, pilotStarted };
+  },
+});
+
+export const pilotStatus = queryGeneric({
+  args: {},
+  handler: async (ctx) => {
+    const startedRows = await ctx.db
+      .query("sessions")
+      .withIndex("by_startedAt", (q) => q.gte("startedAt", 0))
+      .collect();
+    const started = startedRows.filter(
+      (r) => typeof r.startedAt === "number",
+    ).length;
+    return { started };
+  },
+});
+
+export const setFeedback = mutationGeneric({
+  args: {
+    id: v.id("sessions"),
+    score: v.number(),
+    text: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.id);
+    if (!row) return;
+    const score = Math.min(5, Math.max(1, Math.round(args.score)));
+    const text = args.text.trim().slice(0, 600);
+    await ctx.db.patch(args.id, {
+      feedbackScore: score,
+      feedbackText: text,
+      feedbackAt: Date.now(),
+    });
   },
 });
 
@@ -313,6 +356,8 @@ export const listRecent = queryGeneric({
       profileStatus: r.profileStatus ?? "none",
       hasPack: r.pack != null,
       packFailed: r.packFailed === true,
+      feedbackScore: r.feedbackScore,
+      feedbackText: r.feedbackText,
     }));
   },
 });

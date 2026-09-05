@@ -33,6 +33,9 @@ export async function POST(req: Request) {
   }
   const linkedinUrl: string = normalised;
   const caps = await store.caps({ email });
+  if (capsExceeded(caps, "pilot")) {
+    return NextResponse.json({ error: "pilot_full" }, { status: 200 });
+  }
   if (capsExceeded(caps, "email")) {
     return NextResponse.json({ error: "email_cap" });
   }

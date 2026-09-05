@@ -166,6 +166,7 @@ export default async function NextMovePage({
       pack={pack}
       profile={session.profile}
       phone={session.phone ?? null}
+      feedbackScore={session.feedbackScore ?? null}
     />
   );
 }

@@ -1,4 +1,5 @@
 import { unauthorized } from "next/navigation";
+import { envCap } from "@/lib/caps";
 import { store } from "@/lib/convexClient";
 import type { RecentRow } from "@/lib/convexClient";
 import { Container, Eyebrow, Wordmark } from "@/lib/ui";
@@ -32,11 +33,15 @@ export default async function AdminPage({
     unauthorized();
   }
 
-  const [stats, recent, uniqueSignups] = await Promise.all([
-    store.stats(),
-    store.listRecent({ limit: 25 }),
-    store.countUnique(),
-  ]);
+  const [stats, recent, uniqueSignups, waitlist, pilotStarted] =
+    await Promise.all([
+      store.stats(),
+      store.listRecent({ limit: 25 }),
+      store.countUnique(),
+      store.waitlistCount(),
+      store.pilotStarted(),
+    ]);
+  const pilotCap = envCap("PILOT_CAP", 50);
 
   const counters: [string, number][] = [
     ["started", stats.started],
@@ -48,6 +53,7 @@ export default async function AdminPage({
     ["paid", stats.paid],
     ["shared", stats.shared],
     ["signups (unique email + next move written)", uniqueSignups],
+    ["waitlist", waitlist],
   ];
 
   return (
@@ -66,6 +72,9 @@ export default async function AdminPage({
             </div>
           ))}
         </div>
+        <p className="mt-4 font-mono text-[0.6875rem] font-medium text-ink">
+          pilot {pilotStarted} / {pilotCap}
+        </p>
 
         <Eyebrow className="mt-12">LAST 25 SESSIONS</Eyebrow>
         <div className="mt-4 overflow-x-auto rounded-none border border-rule bg-paper">
@@ -80,6 +89,7 @@ export default async function AdminPage({
                 <th className="px-4 py-3 font-medium">sent</th>
                 <th className="px-4 py-3 font-medium">paid</th>
                 <th className="px-4 py-3 font-medium">shares</th>
+                <th className="px-4 py-3 font-medium">fb</th>
                 <th className="px-4 py-3 font-medium">link</th>
               </tr>
             </thead>
@@ -94,6 +104,12 @@ export default async function AdminPage({
                   <td className="px-4 py-3">{row.sent ? "yes" : "no"}</td>
                   <td className="px-4 py-3">{paidLabel(row)}</td>
                   <td className="px-4 py-3">{row.shares}</td>
+                  <td
+                    className="px-4 py-3"
+                    title={row.feedbackText ?? undefined}
+                  >
+                    {row.feedbackScore ?? "·"}
+                  </td>
                   <td className="px-4 py-3">
                     <a href={`/r/${row._id}`} className="text-forest underline">
                       /r/{row._id.slice(0, 8)}
@@ -103,7 +119,7 @@ export default async function AdminPage({
               ))}
               {recent.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={9}>
+                  <td className="px-4 py-6 text-muted" colSpan={10}>
                     No sessions yet.
                   </td>
                 </tr>

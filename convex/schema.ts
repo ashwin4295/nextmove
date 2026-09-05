@@ -37,8 +37,16 @@ export default defineSchema({
       ),
     ),
     profile: v.optional(v.union(v.any(), v.null())),
+    feedbackScore: v.optional(v.number()),
+    feedbackText: v.optional(v.string()),
+    feedbackAt: v.optional(v.number()),
   })
     .index("by_createdAt", ["createdAt"])
     .index("by_email", ["email"])
     .index("by_startedAt", ["startedAt"]),
+  waitlist: defineTable({
+    email: v.string(),
+    source: v.string(),
+    createdAt: v.number(),
+  }).index("by_email", ["email"]),
 });

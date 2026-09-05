@@ -36,6 +36,119 @@ function formatDecisionDate(iso: string) {
   });
 }
 
+function FeedbackBlock({
+  id,
+  initialScore,
+}: {
+  id: string;
+  initialScore: number | null;
+}) {
+  const already = initialScore != null;
+  const [score, setScore] = useState<number | null>(initialScore);
+  const [text, setText] = useState("");
+  const [sent, setSent] = useState(already);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function persist(nextScore: number, nextText: string, asSend: boolean) {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, score: nextScore, text: nextText }),
+      });
+      if (!res.ok) throw new Error("fail");
+      if (asSend) {
+        setSent(true);
+        track("feedback_given", { session_id: id, score: nextScore });
+      }
+    } catch {
+      setError("Something went wrong. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <section className="mt-10">
+        <Rule />
+        <div className="py-6">
+          <p className="text-[1.0625rem] leading-relaxed">
+            Thank you. This goes straight to the person building NextMove.
+          </p>
+        </div>
+        <Rule />
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-10">
+      <Rule />
+      <div className="py-6">
+        <Eyebrow>ONE QUESTION</Eyebrow>
+        <p className="mt-3 font-display text-[1.5rem] leading-snug">
+          Was that worth ten minutes of your time?
+        </p>
+        <div className="mt-5 flex flex-row gap-2">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => {
+                setScore(n);
+                void persist(n, text, false);
+              }}
+              className={`flex size-12 items-center justify-center rounded-none border border-ink font-mono text-[0.75rem] font-medium ${
+                score === n ? "bg-forest text-canvas" : "bg-transparent text-ink"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        <div className="mt-2 flex w-[calc(5*3rem+4*0.5rem)] justify-between">
+          <span className="font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-muted">
+            NOT REALLY
+          </span>
+          <span className="font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-muted">
+            VERY
+          </span>
+        </div>
+        {score != null ? (
+          <div className="mt-6 flex flex-col gap-3">
+            <label className="flex flex-col gap-1.5 font-mono text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-forest">
+              WHAT WOULD HAVE MADE IT BETTER?
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={3}
+                className="w-full rounded-none border border-muted bg-paper px-3 py-2 font-sans text-base text-ink"
+              />
+            </label>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (score == null) return;
+                void persist(score, text, true);
+              }}
+              disabled={busy}
+              className="self-start"
+            >
+              SEND →
+            </Button>
+            {error ? <p className="text-sm text-red-700">{error}</p> : null}
+          </div>
+        ) : null}
+      </div>
+      <Rule />
+    </section>
+  );
+}
+
 export function NextMoveView({
   id,
   nextMove,
@@ -47,6 +160,7 @@ export function NextMoveView({
   pack = null,
   profile = null,
   phone = null,
+  feedbackScore = null,
 }: {
   id: string;
   nextMove: PublicNextMove | null;
@@ -58,6 +172,7 @@ export function NextMoveView({
   pack?: Pack | null;
   profile?: Profile | null;
   phone?: string | null;
+  feedbackScore?: number | null;
 }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -399,6 +514,8 @@ export function NextMoveView({
             You decide whether to send it. Nothing is sent for you.
           </p>
         </Card>
+
+        <FeedbackBlock id={id} initialScore={feedbackScore} />
 
         {nextMove.otherPaths.length > 0 ? (
           <div className="mt-10">

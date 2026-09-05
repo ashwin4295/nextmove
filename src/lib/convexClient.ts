@@ -28,6 +28,8 @@ export type SessionDoc = {
   linkedinUrl: string | null;
   profileStatus: ProfileStatus;
   profile: Profile | null;
+  feedbackScore: number | null;
+  feedbackText: string | null;
 };
 
 export type Stats = {
@@ -55,6 +57,8 @@ export type RecentRow = {
   profileStatus: ProfileStatus;
   hasPack: boolean;
   packFailed: boolean;
+  feedbackScore: number | null;
+  feedbackText: string | null;
 };
 
 export type SessionStore = {
@@ -92,6 +96,17 @@ export type SessionStore = {
     failed?: boolean;
   }) => Promise<void>;
   caps: (args: { email: string }) => Promise<Caps>;
+  pilotStarted: () => Promise<number>;
+  joinWaitlist: (args: {
+    email: string;
+    source: string;
+  }) => Promise<{ ok: true }>;
+  waitlistCount: () => Promise<number>;
+  setFeedback: (args: {
+    id: string;
+    score: number;
+    text: string;
+  }) => Promise<void>;
   setContact: (args: {
     id: string;
     contactName: string;
@@ -144,7 +159,25 @@ type SessionExtras = {
   linkedinUrl?: string | null;
   profileStatus?: ProfileStatus;
   profile?: Profile | null;
+  feedbackScore?: number | null;
+  feedbackText?: string | null;
 };
+
+function getWaitlist(): Set<string> {
+  const g = globalThis as typeof globalThis & {
+    __nextmoveWaitlist?: Set<string>;
+  };
+  if (!g.__nextmoveWaitlist) {
+    g.__nextmoveWaitlist = new Set();
+  }
+  return g.__nextmoveWaitlist;
+}
+
+function countPilotFromRows(
+  rows: { startedAt?: number | null }[],
+): number {
+  return rows.filter((r) => typeof r.startedAt === "number").length;
+}
 
 function extrasMap(): Map<string, SessionExtras> {
   const g = globalThis as typeof globalThis & {
@@ -193,6 +226,8 @@ function hydrate(row: {
   linkedinUrl?: string | null;
   profileStatus?: ProfileStatus;
   profile?: unknown;
+  feedbackScore?: number | null;
+  feedbackText?: string | null;
 }): SessionDoc {
   const nextMove = normalizeNextMove(row.roadmap, { lenient: true });
   const blob =
@@ -259,6 +294,12 @@ function hydrate(row: {
     asProfile(blob?.__profile) ??
     extras?.profile ??
     null;
+  const feedbackScore =
+    (typeof row.feedbackScore === "number" ? row.feedbackScore : null) ??
+    (typeof extras?.feedbackScore === "number" ? extras.feedbackScore : null);
+  const feedbackText =
+    (typeof row.feedbackText === "string" ? row.feedbackText : null) ??
+    (typeof extras?.feedbackText === "string" ? extras.feedbackText : null);
   return {
     _id: String(row._id),
     createdAt: row.createdAt,
@@ -281,6 +322,8 @@ function hydrate(row: {
     linkedinUrl,
     profileStatus,
     profile,
+    feedbackScore,
+    feedbackText,
   };
 }
 
@@ -311,6 +354,8 @@ const memoryStore: SessionStore = {
       linkedinUrl: url,
       profileStatus: url ? "pending" : "none",
       profile: null,
+      feedbackScore: null,
+      feedbackText: null,
     });
     return id;
   },
@@ -383,7 +428,24 @@ const memoryStore: SessionStore = {
       todayStarted: rows.filter(
         (r) => typeof r.startedAt === "number" && r.startedAt >= start,
       ).length,
+      pilotStarted: countPilotFromRows(rows),
     };
+  },
+  async pilotStarted() {
+    return countPilotFromRows([...getMemoryMap().values()]);
+  },
+  async joinWaitlist({ email }) {
+    getWaitlist().add(email.trim().toLowerCase());
+    return { ok: true as const };
+  },
+  async waitlistCount() {
+    return getWaitlist().size;
+  },
+  async setFeedback({ id, score, text }) {
+    const row = getMemoryMap().get(id);
+    if (!row) return;
+    row.feedbackScore = Math.min(5, Math.max(1, Math.round(score)));
+    row.feedbackText = text.trim().slice(0, 600);
   },
   async setContact({ id, contactName, message }) {
     const row = getMemoryMap().get(id);
@@ -420,6 +482,8 @@ const memoryStore: SessionStore = {
         profileStatus: r.profileStatus,
         hasPack: r.pack != null,
         packFailed: r.packFailed,
+        feedbackScore: r.feedbackScore,
+        feedbackText: r.feedbackText,
       }));
   },
   async countUnique() {
@@ -691,7 +755,14 @@ function convexStore(url: string): SessionStore {
           typeof raw.emailStarted === "number" &&
           typeof raw.todayStarted === "number"
         ) {
-          return raw;
+          return {
+            emailStarted: raw.emailStarted,
+            todayStarted: raw.todayStarted,
+            pilotStarted:
+              typeof raw.pilotStarted === "number"
+                ? raw.pilotStarted
+                : await this.pilotStarted(),
+          };
         }
       } catch {
         // new query is not on the live deployment yet
@@ -727,7 +798,71 @@ function convexStore(url: string): SessionStore {
         todayStarted: seen.filter(
           (r) => typeof r.startedAt === "number" && r.startedAt >= start,
         ).length,
+        pilotStarted: countPilotFromRows(seen),
       };
+    },
+    async pilotStarted() {
+      try {
+        const raw = (await client().query(anyApi.sessions.pilotStatus, {})) as {
+          started?: number;
+        };
+        if (raw && typeof raw.started === "number") return raw.started;
+      } catch {
+        // new query is not on the live deployment yet
+      }
+      const ids = recentIdList();
+      const extras = extrasMap();
+      const rows = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const row = await client().query(anyApi.sessions.get, { id });
+            return row ? hydrate(row as SessionDoc) : null;
+          } catch {
+            const extra = extras.get(id);
+            if (!extra) return null;
+            return { startedAt: extra.startedAt ?? null };
+          }
+        }),
+      );
+      return countPilotFromRows(
+        rows.filter((r): r is { startedAt: number | null } => r != null),
+      );
+    },
+    async joinWaitlist({ email, source }) {
+      const key = email.trim().toLowerCase();
+      getWaitlist().add(key);
+      try {
+        await client().mutation(anyApi.waitlist.joinWaitlist, {
+          email: key,
+          source,
+        });
+      } catch {
+        // new mutation is not on the live deployment yet
+      }
+      return { ok: true as const };
+    },
+    async waitlistCount() {
+      try {
+        const n = await client().query(anyApi.waitlist.count, {});
+        if (typeof n === "number") return n;
+      } catch {
+        // new query is not on the live deployment yet
+      }
+      return getWaitlist().size;
+    },
+    async setFeedback({ id, score, text }) {
+      const clamped = Math.min(5, Math.max(1, Math.round(score)));
+      const trimmed = text.trim().slice(0, 600);
+      rememberExtras(id, { feedbackScore: clamped, feedbackText: trimmed });
+      try {
+        await client().mutation(anyApi.sessions.setFeedback, {
+          id,
+          score: clamped,
+          text: trimmed,
+        });
+      } catch {
+        // extras stand for this process
+      }
     },
     async setContact({ id, contactName, message }) {
       try {
@@ -785,7 +920,14 @@ function convexStore(url: string): SessionStore {
       try {
         const rows = (await client().query(anyApi.sessions.listRecent, {
           limit,
-        })) as Array<RecentRow & { hasPack?: boolean; packFailed?: boolean }>;
+        })) as Array<
+          RecentRow & {
+            hasPack?: boolean;
+            packFailed?: boolean;
+            feedbackScore?: number | null;
+            feedbackText?: string | null;
+          }
+        >;
         const legacy = rows.every(
           (r) => r.hasPack === undefined && r.packFailed === undefined,
         );
@@ -819,6 +961,14 @@ function convexStore(url: string): SessionStore {
               profileStatus: r.profileStatus ?? extra?.profileStatus ?? "none",
               hasPack,
               packFailed,
+              feedbackScore:
+                typeof r.feedbackScore === "number"
+                  ? r.feedbackScore
+                  : extra?.feedbackScore ?? null,
+              feedbackText:
+                typeof r.feedbackText === "string"
+                  ? r.feedbackText
+                  : extra?.feedbackText ?? null,
             };
           }),
         );
@@ -845,6 +995,8 @@ function convexStore(url: string): SessionStore {
             profileStatus: r.profileStatus,
             hasPack: r.pack != null,
             packFailed: r.packFailed,
+            feedbackScore: r.feedbackScore,
+            feedbackText: r.feedbackText,
           }));
       }
     },
