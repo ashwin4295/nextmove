@@ -487,7 +487,6 @@ export function Landing({
         <Section id="start">
           <div className="grid items-center gap-12 md:grid-cols-12 md:gap-10 lg:gap-14">
             <div className="min-w-0 md:col-span-6">
-              <Eyebrow>For professionals 4 to 15 years in · India</Eyebrow>
               <h1 className="hero-h1 mt-4">
                 <span>You&apos;ve come</span>
                 <span className="md:hidden"> </span>
